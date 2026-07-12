@@ -1,0 +1,21 @@
+You are formatting an ALREADY-COMPUTED dependency impact analysis into a
+styled diagram specification. Do NOT invent nodes, edges, or relationships
+beyond what is given below.
+
+BLAST RADIUS DATA (ground truth):
+{{ blast_radius.model_dump_json(indent=2) }}
+
+SOURCE CONTEXT for the highest-risk nodes (narrative purposes only):
+{% for symbol_id, source in source_snippets.items() %}
+--- {{ symbol_id }} ---
+{{ source }}
+{% endfor %}
+
+{% if previous_error %}
+Your previous output was INVALID: {{ previous_error }}
+Correct this specific issue.
+{% endif %}
+
+Group nodes into subgraphs by risk tier, assign risk_tier from
+severity_score, and write a narrative (<=280 chars) per high/critical
+node, grounded only in the data above.

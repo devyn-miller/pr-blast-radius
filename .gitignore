@@ -1,0 +1,12 @@
+bin/
+*.exe
+go-core/**/*.db
+py-orchestrator/.venv/
+py-orchestrator/**/__pycache__/
+py-orchestrator/**/*.egg-info/
+.pytest_cache/
+.env
+.vscode/
+.idea/
+docs/generated/
+blast-radius-output/
