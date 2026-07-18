@@ -2,8 +2,8 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 class ChangedSymbol(BaseModel):
-    symbol_id: str
-    change_type: str  # "Added" | "Modified" | "Deleted" | "SignatureChanged"
+    SymbolID: str
+    ChangeType: str  # "Added" | "Modified" | "Deleted" | "SignatureChanged"
 
 class GraphMetadata(BaseModel):
     repo_path: str = ""
@@ -25,14 +25,14 @@ class Node(BaseModel):
     EndLine: int
     InDegree: int = 0
     OutDegree: int = 0
-    Tags: list[str] = Field(default_factory=list)
+    Tags: list[str] | None = None
 
 class Edge(BaseModel):
     From: str
     To: str
     Type: str
     Confidence: float
-    Tags: list[str] = Field(default_factory=list)
+    Tags: list[str] | None = None
 
 class Graph(BaseModel):
     Nodes: dict[str, Node]
