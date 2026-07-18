@@ -2,6 +2,21 @@
 name = "blast-radius-orchestrator"
 version = "0.1.0"
 requires-python = ">=3.11"
+dependencies = [
+    "google-genai>=0.2.0",
+    "ollama>=0.1.0",
+    "pydantic>=2.0.0",
+    "mcp>=1.0.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "jinja2>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -9,3 +24,7 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 include = ["orchestrator*"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
