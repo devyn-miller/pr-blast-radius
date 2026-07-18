@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/<you>/blast-radius/go-core/internal/astparse"
-	"github.com/<you>/blast-radius/go-core/internal/cache"
-	"github.com/<you>/blast-radius/go-core/internal/gitdiff"
-	"github.com/<you>/blast-radius/go-core/internal/mcpserver"
-	"github.com/<you>/blast-radius/go-core/internal/severity"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/astparse"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/cache"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/gitdiff"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/mcpserver"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/severity"
 )
 
 func main() {

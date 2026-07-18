@@ -179,8 +179,8 @@ func TestPopulateSeverity_UsesWeakestConfidenceOnPath(t *testing.T) {
 	require.True(t, farRecorded)
 	assert.InDelta(t, float32(0.3), fake.lastWeakestSeen["far"], 0.001,
 		"far's path weakest-link must be 0.3 (the mid->root edge), not 0.9 (the far->mid edge)")
-	assert.InDelta(t, float32(0.9), fake.lastWeakestSeen["mid"], 0.001,
-		"mid's own path weakest-link is just its own edge, 0.9")
+	assert.InDelta(t, float32(0.3), fake.lastWeakestSeen["mid"], 0.001,
+		"mid's path weakest-link is the mid->root edge itself, 0.3")
 }
 
 func TestPopulateSeverity_SkipsUnknownNodeGracefully(t *testing.T) {

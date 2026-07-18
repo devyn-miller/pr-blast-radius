@@ -1,3 +1,4 @@
+// go-core/internal/mcpserver/server.go
 package mcpserver
 
 import (
@@ -7,11 +8,11 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/<you>/blast-radius/go-core/internal/astparse"
-	"github.com/<you>/blast-radius/go-core/internal/cache"
-	"github.com/<you>/blast-radius/go-core/internal/gitdiff"
-	"github.com/<you>/blast-radius/go-core/internal/graph"
-	"github.com/<you>/blast-radius/go-core/internal/severity"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/astparse"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/cache"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/gitdiff"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/graph"
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/severity"
 )
 
 type Server struct {
@@ -20,7 +21,7 @@ type Server struct {
 	store     cache.Store
 	scorer    *severity.Scorer
 
-	graphCache map[string]*graph.Graph // repoPath -> last-built Graph, in-process only (per-run, not persisted)
+	graphCache map[string]*graph.Graph
 }
 
 func NewServer(extractor gitdiff.Extractor, registry *astparse.Registry, store cache.Store, scorer *severity.Scorer) *Server {
@@ -80,8 +81,14 @@ func (s *Server) Serve(ctx context.Context) error {
 // --- Handlers: thin wiring only, all real logic lives in graph/severity/cache ---
 
 func (s *Server) toolGetChangedSymbols(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoPath := req.Params.Arguments["repo_path"].(string)
-	refRange := req.Params.Arguments["ref_range"].(string)
+	repoPath, err := req.RequireString("repo_path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	refRange, err := req.RequireString("ref_range")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 
 	g, diffs, err := s.buildGraphAndDiff(ctx, repoPath, refRange)
 	if err != nil {
@@ -93,8 +100,11 @@ func (s *Server) toolGetChangedSymbols(ctx context.Context, req mcp.CallToolRequ
 }
 
 func (s *Server) toolGetDependencyGraph(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoPath := req.Params.Arguments["repo_path"].(string)
-	forceRebuild, _ := req.Params.Arguments["force_rebuild"].(bool)
+	repoPath, err := req.RequireString("repo_path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	forceRebuild := req.GetBool("force_rebuild", false)
 
 	if forceRebuild {
 		delete(s.graphCache, repoPath)
@@ -108,12 +118,15 @@ func (s *Server) toolGetDependencyGraph(ctx context.Context, req mcp.CallToolReq
 }
 
 func (s *Server) toolComputeBlastRadius(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoPath := req.Params.Arguments["repo_path"].(string)
-	refRange := req.Params.Arguments["ref_range"].(string)
-	maxDepth := 3
-	if v, ok := req.Params.Arguments["max_depth"].(float64); ok {
-		maxDepth = int(v)
+	repoPath, err := req.RequireString("repo_path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
+	refRange, err := req.RequireString("ref_range")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	maxDepth := req.GetInt("max_depth", 3)
 
 	g, diffs, err := s.buildGraphAndDiff(ctx, repoPath, refRange)
 	if err != nil {
@@ -133,12 +146,15 @@ func (s *Server) toolComputeBlastRadius(ctx context.Context, req mcp.CallToolReq
 }
 
 func (s *Server) toolGetSymbolSource(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoPath := req.Params.Arguments["repo_path"].(string)
-	symbolID := req.Params.Arguments["symbol_id"].(string)
-	maxBytes := 2000
-	if v, ok := req.Params.Arguments["max_bytes"].(float64); ok {
-		maxBytes = int(v)
+	repoPath, err := req.RequireString("repo_path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
+	symbolID, err := req.RequireString("symbol_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	maxBytes := req.GetInt("max_bytes", 2000)
 
 	g, err := s.getOrBuildGraph(ctx, repoPath)
 	if err != nil {
@@ -204,7 +220,6 @@ func parseRefRange(s string) gitdiff.RefRange {
 	if s == "WORKING_TREE" {
 		return gitdiff.RefRange{Kind: gitdiff.RefRangeWorkingTree}
 	}
-	// "main...feature" vs "HEAD~1" disambiguation left to a small strings.Contains(s, "...") check
 	if containsRangeMarker(s) {
 		parts := splitRangeMarker(s)
 		return gitdiff.RefRange{Kind: gitdiff.RefRangeCommitRange, FromRef: parts[0], ToRef: parts[1]}

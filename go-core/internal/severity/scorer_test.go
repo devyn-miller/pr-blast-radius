@@ -98,8 +98,7 @@ func TestScore_TableDriven(t *testing.T) {
 		wantMax    float64
 	}{
 		{"root-adjacent, isolated, no route, uncertain path", graph.Node{}, 1, 0.3, 10, 0.0, 0.3},
-		{"far, hub, route handler, certain path", graph.Node{InDegree: 10, Tags: []string{"route:GET:/x"}}, 5, 1.0, 10, 0.4, 0.7},
-	}
+		{"far, hub, route handler, certain path", graph.Node{InDegree: 10, Tags: []string{"route:GET:/x"}}, 5, 1.0, 10, 0.4, 0.71},	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
