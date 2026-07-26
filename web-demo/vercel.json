@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "out",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "github": {
+    "silent": false,
+    "autoAlias": true
+  }
+}
