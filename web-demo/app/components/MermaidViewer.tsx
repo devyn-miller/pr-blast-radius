@@ -118,9 +118,11 @@ const examples: Record<string, { diagram: string; description: string; details: 
 export default function MermaidViewer({ exampleName }: MermaidViewerProps) {
   const mermaidRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const example = examples[exampleName] || examples.tinyshop;
 
   useEffect(() => {
+    setMounted(true);
     mermaid.initialize({
       startOnLoad: false,
       theme: 'default',
@@ -169,18 +171,24 @@ export default function MermaidViewer({ exampleName }: MermaidViewerProps) {
       </div>
 
       {/* Diagram Container */}
-      <div className="relative">
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-lg">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        )}
+      {mounted ? (
+        <div className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-lg">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          )}
 
-        <div
-          ref={mermaidRef}
-          className="mermaid min-h-[400px] flex items-center justify-center overflow-x-auto"
-        />
-      </div>
+          <div
+            ref={mermaidRef}
+            className="mermaid min-h-[400px] flex items-center justify-center overflow-x-auto"
+          />
+        </div>
+      ) : (
+        <div className="min-h-[400px] flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-lg">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
