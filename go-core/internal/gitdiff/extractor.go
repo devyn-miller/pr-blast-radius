@@ -55,12 +55,12 @@ func (e *GoGitExtractor) diffWorkingTree(repo *git.Repository) ([]FileDiff, erro
 		}
 		diffs = append(diffs, FileDiff{
 			FilePath:   path,
-			ChangeType: mapGitStatusCode(fileStatus.Worktree),
+			ChangeType: mapFileStatus(fileStatus),
 		})
 	}
 
 	for i := range diffs {
-		hunks, err := e.computeHunksForFile(repo, diffs[i].FilePath)
+		hunks, err := e.computeHunksForFile(repo, diffs[i].FilePath, diffs[i].ChangeType)
 		if err != nil {
 			return nil, err
 		}
@@ -129,6 +129,21 @@ func resolveCommit(repo *git.Repository, ref string) (*object.Commit, error) {
 		return nil, fmt.Errorf("gitdiff: resolving ref %q: %w", ref, err)
 	}
 	return repo.CommitObject(*hash)
+}
+
+// mapFileStatus classifies a working-tree change from BOTH of go-git's status
+// codes. Staging is index-vs-HEAD and Worktree is disk-vs-index, so a `git rm`
+// (or `git add` of a deletion) leaves Staging=Deleted and Worktree=Unmodified:
+// reading the worktree code alone would call that file Modified and then fail
+// trying to read a file that is no longer on disk.
+func mapFileStatus(fs *git.FileStatus) ChangeType {
+	if fs.Worktree == git.Deleted || fs.Staging == git.Deleted {
+		return ChangeDeleted
+	}
+	if fs.Worktree == git.Unmodified && fs.Staging != git.Unmodified {
+		return mapGitStatusCode(fs.Staging)
+	}
+	return mapGitStatusCode(fs.Worktree)
 }
 
 func mapGitStatusCode(code git.StatusCode) ChangeType {

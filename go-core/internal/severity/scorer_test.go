@@ -98,7 +98,7 @@ func TestScore_TableDriven(t *testing.T) {
 		wantMax    float64
 	}{
 		{"root-adjacent, isolated, no route, uncertain path", graph.Node{}, 1, 0.3, 10, 0.0, 0.3},
-		{"far, hub, route handler, certain path", graph.Node{InDegree: 10, Tags: []string{"route:GET:/x"}}, 5, 1.0, 10, 0.4, 0.71},	}
+		{"far, hub, route handler, certain path", graph.Node{InDegree: 10, Tags: []string{"route:GET:/x"}}, 5, 1.0, 10, 0.4, 0.71}}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -106,5 +106,41 @@ func TestScore_TableDriven(t *testing.T) {
 			assert.GreaterOrEqual(t, got, tc.wantMin)
 			assert.LessOrEqual(t, got, tc.wantMax)
 		})
+	}
+}
+func TestReasons_NoneApply_IsEmptyNotNil(t *testing.T) {
+	// Marshals into AffectedNode.SeverityReasons; nil would encode as null,
+	// which the Python client rejects.
+	reasons := NewScorer(DefaultWeights).Reasons(graph.Node{}, 1, 1.0)
+	assert.NotNil(t, reasons)
+	assert.Empty(t, reasons)
+}
+
+// TestMaxReachableScore_MatchesScorerAtMaximalInputs pins the closed-form
+// ceiling in MaxReachableScore to what Score actually returns when every term
+// is maximal, so the two cannot drift. It also prints the ceilings, which are
+// what the Python risk-tier cutoffs are calibrated against.
+func TestMaxReachableScore_MatchesScorerAtMaximalInputs(t *testing.T) {
+	scorer := NewScorer(DefaultWeights)
+
+	const maxInDegree = 10
+	routeNode := graph.Node{InDegree: maxInDegree, Tags: []string{"route:GET:/x"}}
+	plainNode := graph.Node{InDegree: maxInDegree}
+
+	// distance 1 is the smallest distance an affected node can have; distance 0
+	// is a changed root, which PopulateSeverity never scores.
+	gotRoute := scorer.Score(routeNode, 1, 1.0, maxInDegree)
+	gotPlain := scorer.Score(plainNode, 1, 1.0, maxInDegree)
+
+	t.Logf("max reachable severity score at distance>=1: route=%.4f non-route=%.4f",
+		gotRoute, gotPlain)
+
+	assert.InDelta(t, MaxReachableScore(DefaultWeights, true), gotRoute, 1e-9)
+	assert.InDelta(t, MaxReachableScore(DefaultWeights, false), gotPlain, 1e-9)
+
+	// A larger distance can only lower the score, never raise it past the ceiling.
+	for d := 2; d <= 6; d++ {
+		assert.LessOrEqual(t, scorer.Score(routeNode, d, 1.0, maxInDegree),
+			MaxReachableScore(DefaultWeights, true))
 	}
 }

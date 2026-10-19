@@ -5,8 +5,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
 
 	"github.com/devyn-miller/pr-blast-radius/go-core/internal/astparse"
 	"github.com/devyn-miller/pr-blast-radius/go-core/internal/cache"
@@ -16,58 +22,167 @@ import (
 )
 
 // TestFullPipeline_TinyShop_GoldenFile runs the complete blast radius analysis
-// against the TinyShop fixture repository with a WORKING_TREE diff.
+// against the TinyShop fixture with a WORKING_TREE diff that adds a
+// `currency` parameter to DiscountEngine.apply_discount.
 //
-// Test scenario:
-// 1. The TinyShop repo has been committed with the initial state
-// 2. We make an uncommitted change to discount_engine.py: add a `currency` parameter
-//    to the apply_discount() signature
-// 3. We run the full pipeline (parse → resolve → graph → traverse → severity)
-// 4. We verify that OrderService.price appears in the blast radius (it calls apply_discount)
-// 5. We verify that InventoryService.reserve does NOT appear (independent of pricing)
+// TinyShop's call chain is Python-only. Four route handlers reach pricing:
+//
+//	POST /orders    create_order -> orders.price() -> self.pricing.apply_discount()
+//	POST /quote     quote_order  -> orders.price() -> ...
+//	POST /cart      price_cart   -> orders.price() -> ...
+//	POST /checkout  checkout     -> orders.price() -> ...
+//	GET /inventory/<sku> reserve_stock -> inventory.reserve()   (independent)
+//
+// That makes OrderService.price the graph's fan-in hotspot (in-degree 4, the
+// graph maximum), which is the point of the fixture: severity has to separate
+// the one shared chokepoint from the four thin handlers above it.
+//
+// api/routes.py also constructs DiscountEngine() at module level, and the
+// diff marks the DiscountEngine class Modified, so that module node is
+// affected at distance 1 as well.
 func TestFullPipeline_TinyShop_GoldenFile(t *testing.T) {
+	depGraph, blastRadius := runTinyShopPipeline(t)
+
+	type hit struct {
+		distance int
+		node     graph.Node
+	}
+	affected := map[string]hit{}
+	for _, an := range blastRadius.AffectedNodes {
+		node := depGraph.Nodes[an.NodeID]
+		key := node.QualifiedName
+		if node.Kind == astparse.KindModule {
+			key = node.FilePath + ":" + node.QualifiedName
+		}
+		affected[key] = hit{an.Distance, node}
+		t.Logf("Affected: %s (distance=%d, severity=%.3f, reasons=%v)", key, an.Distance, an.SeverityScore, an.SeverityReasons)
+	}
+
+	want := map[string]int{
+		"OrderService.price":     1,
+		"api/routes.py:<module>": 1,
+		"create_order":           2,
+		"quote_order":            2,
+		"price_cart":             2,
+		"checkout":               2,
+	}
+	got := map[string]int{}
+	for k, h := range affected {
+		got[k] = h.distance
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("affected nodes (name -> distance):\n got  %v\n want %v", got, want)
+	}
+
+	for handler, tag := range map[string]string{
+		"create_order": "route:POST:/orders",
+		"quote_order":  "route:POST:/quote",
+		"price_cart":   "route:POST:/cart",
+		"checkout":     "route:POST:/checkout",
+	} {
+		if tags := affected[handler].node.Tags; !slices.Contains(tags, tag) {
+			t.Errorf("%s should be tagged %q, tags=%v", handler, tag, tags)
+		}
+	}
+
+	// price is the single chokepoint all four handlers go through, so it must
+	// be the graph's fan-in maximum — that is what lifts it above the handlers
+	// in severity rather than any weight tuning.
+	price := affected["OrderService.price"].node
+	maxInDegree := 0
+	for _, n := range depGraph.Nodes {
+		if n.InDegree > maxInDegree {
+			maxInDegree = n.InDegree
+		}
+	}
+	if price.InDegree != 4 || price.InDegree != maxInDegree {
+		t.Errorf("OrderService.price in-degree = %d (graph max %d), want 4 and equal to the max",
+			price.InDegree, maxInDegree)
+	}
+	for _, untouched := range []string{"InventoryService.reserve", "reserve_stock", "OrderService.reserve_inventory"} {
+		if _, ok := affected[untouched]; ok {
+			t.Errorf("%s is on the inventory branch and must not be affected", untouched)
+		}
+	}
+
+	// price -> apply_discount goes through self.pricing, typed from the
+	// `pricing: DiscountEngine` parameter (param-typed confidence), so it is
+	// no longer a 0.3 duck-typed edge.
+	var priceToApply []graph.Edge
+	for _, e := range depGraph.OutEdges[affected["OrderService.price"].node.ID] {
+		if depGraph.Nodes[e.To].QualifiedName == "DiscountEngine.apply_discount" {
+			priceToApply = append(priceToApply, e)
+		}
+	}
+	if len(priceToApply) != 1 || priceToApply[0].Confidence != graph.ConfidenceLocalInference {
+		t.Errorf("OrderService.price -> apply_discount: want one edge at %.2f, got %+v",
+			graph.ConfidenceLocalInference, priceToApply)
+	}
+}
+
+// commitFixtureBase makes dir a fresh single-commit git repo of its current
+// files, discarding any copied .git. The base state is then exactly the
+// fixture files on disk, independent of whether examples/tinyshop's own repo
+// has committed them (CI has no nested .git at all).
+func commitFixtureBase(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.RemoveAll(filepath.Join(dir, ".git")); err != nil {
+		t.Fatalf("removing copied .git: %v", err)
+	}
+	repo, err := git.PlainInit(dir, false)
+	if err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	wt, err := repo.Worktree()
+	if err != nil {
+		t.Fatalf("worktree: %v", err)
+	}
+	if err := wt.AddWithOptions(&git.AddOptions{All: true}); err != nil {
+		t.Fatalf("git add: %v", err)
+	}
+	sig := &object.Signature{Name: "fixture", Email: "fixture@localhost", When: time.Unix(0, 0)}
+	if _, err := wt.Commit("TinyShop fixture base", &git.CommitOptions{Author: sig}); err != nil {
+		t.Fatalf("git commit: %v", err)
+	}
+}
+
+// runTinyShopPipeline copies the TinyShop fixture to a temp dir, commits it as
+// the base, applies the apply_discount signature change as an uncommitted
+// edit, and runs parse → resolve → graph → traverse → severity, returning the
+// graph and the scored blast radius.
+func runTinyShopPipeline(t *testing.T) (*graph.Graph, graph.BlastRadiusResult) {
+	t.Helper()
+
 	// Find the TinyShop fixture relative to this test file
-	tinyshopPath := filepath.Join("..", "..", "..", "examples", "tinyshop")
-	absPath, err := filepath.Abs(tinyshopPath)
+	fixturePath, err := filepath.Abs(filepath.Join("..", "..", "..", "examples", "tinyshop"))
 	if err != nil {
 		t.Fatalf("Failed to resolve tinyshop path: %v", err)
 	}
 
-	// Verify it's a git repo
-	if _, err := os.Stat(filepath.Join(absPath, ".git")); os.IsNotExist(err) {
-		t.Fatalf("TinyShop is not a git repo - run 'git init' in %s", absPath)
+	absPath := filepath.Join(t.TempDir(), "tinyshop")
+	if err := os.CopyFS(absPath, os.DirFS(fixturePath)); err != nil {
+		t.Fatalf("Failed to copy tinyshop fixture: %v", err)
 	}
+	commitFixtureBase(t, absPath)
 
-	// Path to the file we'll modify
 	discountEnginePath := filepath.Join(absPath, "services", "pricing", "discount_engine.py")
-
-	// Read original content
 	originalContent, err := os.ReadFile(discountEnginePath)
 	if err != nil {
 		t.Fatalf("Failed to read discount_engine.py: %v", err)
 	}
 
-	// Make an uncommitted change: add a `currency` parameter to apply_discount signature
-	// Original: def apply_discount(self, base_price: Money, customer_tier: str) -> Money:
-	// Modified: def apply_discount(self, base_price: Money, customer_tier: str, currency: str = "USD") -> Money:
-	modifiedContent := strings.Replace(
-		string(originalContent),
-		"def apply_discount(self, base_price: Money, customer_tier: str) -> Money:",
-		"def apply_discount(self, base_price: Money, customer_tier: str, currency: str = \"USD\") -> Money:",
-		1,
-	)
+	const originalSig = "def apply_discount(self, base_price: Money, customer_tier: str) -> Money:"
+	const modifiedSig = "def apply_discount(self, base_price: Money, customer_tier: str, currency: str = \"USD\") -> Money:"
+	if !strings.Contains(string(originalContent), originalSig) {
+		t.Fatalf("%s/services/pricing/discount_engine.py does not contain the original apply_discount "+
+			"signature; the fixture must hold the pre-change version", fixturePath)
+	}
 
-	// Write the modified content (uncommitted change)
+	// Make the uncommitted change in the copy only
+	modifiedContent := strings.Replace(string(originalContent), originalSig, modifiedSig, 1)
 	if err := os.WriteFile(discountEnginePath, []byte(modifiedContent), 0644); err != nil {
 		t.Fatalf("Failed to write modified discount_engine.py: %v", err)
 	}
-
-	// Ensure we restore the original content after the test
-	defer func() {
-		if err := os.WriteFile(discountEnginePath, originalContent, 0644); err != nil {
-			t.Errorf("Failed to restore discount_engine.py: %v", err)
-		}
-	}()
 
 	// Now run the full pipeline
 	ctx := context.Background()
@@ -178,39 +293,5 @@ func TestFullPipeline_TinyShop_GoldenFile(t *testing.T) {
 	scorer := severity.NewScorer(severity.DefaultWeights)
 	traverser.PopulateSeverity(&blastRadius, scorer)
 
-	// Step 8: Verify golden assertions
-	// We expect OrderService.price to be affected (it calls apply_discount)
-	// We expect InventoryService.reserve to NOT be affected (independent)
-	foundOrderServicePrice := false
-	foundInventoryServiceReserve := false
-
-	for _, affected := range blastRadius.AffectedNodes {
-		node := depGraph.Nodes[affected.NodeID]
-		qualName := node.QualifiedName
-
-		t.Logf("Affected: %s (distance=%d, severity=%.3f)", qualName, affected.Distance, affected.SeverityScore)
-
-		if strings.Contains(qualName, "OrderService") && strings.Contains(qualName, "price") {
-			foundOrderServicePrice = true
-		}
-		if strings.Contains(qualName, "InventoryService") && strings.Contains(qualName, "reserve") {
-			foundInventoryServiceReserve = true
-		}
-	}
-
-	// GOLDEN ASSERTIONS
-	if !foundOrderServicePrice {
-		t.Error("Expected OrderService.price in blast radius (it calls apply_discount), but it was not found")
-	}
-	if foundInventoryServiceReserve {
-		t.Error("InventoryService.reserve should NOT be in blast radius (independent of pricing), but it was found")
-	}
-
-	// Verify we got a non-empty blast radius
-	if blastRadius.TotalNodesAffected == 0 {
-		t.Error("Expected non-zero TotalNodesAffected")
-	}
-
-	t.Logf("✅ Integration test passed: %d total nodes affected, OrderService.price found, InventoryService.reserve not found",
-		blastRadius.TotalNodesAffected)
+	return depGraph, blastRadius
 }

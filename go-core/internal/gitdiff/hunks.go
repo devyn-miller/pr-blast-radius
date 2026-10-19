@@ -3,7 +3,9 @@ package gitdiff
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -61,7 +63,10 @@ func mergeAdjacentHunks(hunks []Hunk) []Hunk {
 	return merged
 }
 
-func (e *GoGitExtractor) computeHunksForFile(repo *git.Repository, filePath string) ([]Hunk, error) {
+// computeHunksForFile diffs HEAD's copy of filePath against the on-disk copy.
+// changeType is passed in because a deleted file has no on-disk copy at all:
+// its new content is empty, which makes the whole old file one changed range.
+func (e *GoGitExtractor) computeHunksForFile(repo *git.Repository, filePath string, changeType ChangeType) ([]Hunk, error) {
 	head, err := repo.Head()
 	if err != nil {
 		return nil, err
@@ -85,17 +90,37 @@ func (e *GoGitExtractor) computeHunksForFile(repo *git.Repository, filePath stri
 	if err != nil {
 		return nil, err
 	}
-	newBytes, err := readWorktreeFile(wt, filePath)
-	if err != nil {
-		return nil, err
+
+	newContent := ""
+	if changeType != ChangeDeleted {
+		newBytes, err := readWorktreeFile(wt, filePath)
+		switch {
+		case err == nil:
+			newContent = string(newBytes)
+		case errors.Is(err, os.ErrNotExist):
+			// Status said the file is still tracked and present but it is gone
+			// from disk (a race, or a status code we classified as something
+			// other than Deleted). Treat it as deleted rather than failing the
+			// whole diff.
+		default:
+			return nil, err
+		}
 	}
 
-	return diffTextToHunks(oldContent, string(newBytes)), nil
+	return diffTextToHunks(oldContent, newContent), nil
 }
 
 func diffTextToHunks(oldText, newText string) []Hunk {
 	oldLines := splitLines(oldText)
 	newLines := splitLines(newText)
+
+	// A deleted (or emptied) file has no new-file lines to report a range in,
+	// and the prefix/suffix walk below would return no hunks at all for it.
+	// Report the whole old file as the single changed range instead, so the
+	// file still registers as changed.
+	if len(newLines) == 0 && len(oldLines) > 0 {
+		return []Hunk{{StartLine: 1, EndLine: len(oldLines)}}
+	}
 
 	prefixLen := 0
 	for prefixLen < len(oldLines) && prefixLen < len(newLines) && oldLines[prefixLen] == newLines[prefixLen] {

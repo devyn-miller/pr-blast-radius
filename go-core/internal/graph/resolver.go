@@ -112,8 +112,11 @@ func findEnclosingSymbol(symbols []astparse.SymbolCapture, line int) *astparse.S
 // statement in Python). A stable, per-file synthetic node — never a guess
 // about WHERE the call logically belongs, just an honest label for
 // "top of this file."
+// fileLevelQualifiedName is the ID input for a file's synthetic module node.
+const fileLevelQualifiedName = "<file-level>"
+
 func (r *Resolver) fileLevelNodeID(fc astparse.FileCaptures) NodeID {
-	return computeNodeID(fc.FilePath, "<file-level>")
+	return computeNodeID(fc.FilePath, fileLevelQualifiedName)
 }
 
 // appendDirectCall handles R1/P1 (unambiguous direct call) and the
@@ -199,7 +202,11 @@ func (r *Resolver) resolveSelectorCall(
 		}
 	}
 
-	// R3/P3/P4: operand's type known via local inference.
+	// R3/P3/P4: operand's type known via local inference. Keys are bare
+	// variable names, plus "self.X" for instance attributes (the Python
+	// parser's self.X = Ctor() / self.X = typed_param hints), so a chained
+	// call like self.pricing.apply_discount() resolves through its operand
+	// text "self.pricing". Anything else falls through to P5 below.
 	if hint, ok := localTypes[call.OperandName]; ok {
 		if methods, isInterface := r.table.interfaces[hint.resolvedType]; isInterface && methods != nil {
 			// R4: the resolved "type" is an INTERFACE, not a concrete

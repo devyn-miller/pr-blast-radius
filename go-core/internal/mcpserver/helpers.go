@@ -93,14 +93,27 @@ func readSymbolSource(repoPath string, node graph.Node, maxBytes int) (source st
 	return snippet, false, nil
 }
 
+// rangeMarkers is checked in order: "..." must come first because it
+// contains "..". Both map to the same tree-to-tree diff (the extractor does
+// not compute a merge base), which is exactly git's `diff A..B` semantics.
+var rangeMarkers = []string{"...", ".."}
+
 func containsRangeMarker(s string) bool {
-	return strings.Contains(s, "...")
+	return strings.Contains(s, "..")
 }
 
 func splitRangeMarker(s string) [2]string {
-	parts := strings.SplitN(s, "...", 2)
-	if len(parts) != 2 {
-		return [2]string{s, "HEAD"}
+	for _, marker := range rangeMarkers {
+		if from, to, ok := strings.Cut(s, marker); ok {
+			// Like git, an omitted side means HEAD ("..feature", "main..").
+			if from == "" {
+				from = "HEAD"
+			}
+			if to == "" {
+				to = "HEAD"
+			}
+			return [2]string{from, to}
+		}
 	}
-	return [2]string{parts[0], parts[1]}
+	return [2]string{s, "HEAD"}
 }

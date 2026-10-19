@@ -3,6 +3,7 @@ package astparse
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -253,8 +254,8 @@ func (p *PythonParser) extractImports(root *sitter.Node, source []byte) ([]Impor
 			case "import.symbol":
 				// from X import Y — Y is a name pulled from module X, not
 				// a separate module path; fold it in for symbol-table use
-				// downstream without inventing a new field.
-				imp.ModulePath = imp.ModulePath // module already set by import.module in same match
+				// downstream without inventing a new field. ModulePath is
+				// already set by import.module in the same match.
 				imp.Alias = text
 			case "dyn.obj", "dyn.method":
 				isDynamic = true
@@ -358,15 +359,25 @@ func (p *PythonParser) extractTypeHints(root *sitter.Node, source []byte) ([]Typ
 
 	var hints []TypeHintCapture
 
+	// self.X assignments, resolved to "self.X" hints after the loop:
+	// selfAttrCtors[X] is every constructor assigned to self.X;
+	// selfAttrSources[X] is every bare variable assigned to self.X.
+	selfAttrCtors := map[string][]string{}
+	selfAttrSources := map[string][]string{}
+
 	for {
 		m, ok := qc.NextMatch()
 		if !ok {
 			break
 		}
 		m = qc.FilterPredicates(m, source)
+		if len(m.Captures) == 0 {
+			continue // a #eq? predicate rejected the match (e.g. other.x = ...)
+		}
 
 		var (
-			varName, varType, ctorName, selfParam string
+			varName, varType, ctorName, selfParam  string
+			selfAttr, selfAttrCtor, selfAttrSource string
 		)
 
 		for _, c := range m.Captures {
@@ -380,10 +391,20 @@ func (p *PythonParser) extractTypeHints(root *sitter.Node, source []byte) ([]Typ
 				ctorName = text
 			case "self.param_name":
 				selfParam = text
+			case "self_attr.name":
+				selfAttr = text
+			case "self_attr.constructor_name":
+				selfAttrCtor = text
+			case "self_attr.source_var":
+				selfAttrSource = text
 			}
 		}
 
 		switch {
+		case selfAttr != "" && selfAttrCtor != "":
+			selfAttrCtors[selfAttr] = append(selfAttrCtors[selfAttr], selfAttrCtor)
+		case selfAttr != "" && selfAttrSource != "":
+			selfAttrSources[selfAttr] = append(selfAttrSources[selfAttr], selfAttrSource)
 		case selfParam != "":
 			hints = append(hints, TypeHintCapture{
 				VarName: selfParam, InferenceSource: InferFromSelfParam,
@@ -399,5 +420,66 @@ func (p *PythonParser) extractTypeHints(root *sitter.Node, source []byte) ([]Typ
 		}
 	}
 
-	return hints, nil
+	return append(hints, resolveSelfAttrHints(hints, selfAttrCtors, selfAttrSources)...), nil
+}
+
+// resolveSelfAttrHints turns self.X assignments into "self.X" hints so the
+// resolver can type chained calls like self.pricing.apply_discount(). A
+// copied variable takes its type from a param-typed hint of the same name
+// in this file (the same file-level scoping as every other hint). A
+// self.X with no determinable type, or with conflicting types anywhere in
+// the file (e.g. two classes both assigning self.engine), gets no hint, so
+// calls through it keep the existing duck-typed behavior.
+func resolveSelfAttrHints(hints []TypeHintCapture, ctors, sources map[string][]string) []TypeHintCapture {
+	paramTypes := map[string]map[string]bool{}
+	for _, h := range hints {
+		if h.InferenceSource == InferFromParamType {
+			if paramTypes[h.VarName] == nil {
+				paramTypes[h.VarName] = map[string]bool{}
+			}
+			paramTypes[h.VarName][h.ResolvedType] = true
+		}
+	}
+
+	attrs := map[string]bool{}
+	for a := range ctors {
+		attrs[a] = true
+	}
+	for a := range sources {
+		attrs[a] = true
+	}
+	names := make([]string, 0, len(attrs))
+	for a := range attrs {
+		names = append(names, a)
+	}
+	sort.Strings(names)
+
+	var out []TypeHintCapture
+	for _, attr := range names {
+		// type -> source; a type seen via any constructor is reported as
+		// constructor-tracked (the lower of the two confidences).
+		types := map[string]InferenceSource{}
+		undetermined := false
+		for _, ctor := range ctors[attr] {
+			types[ctor] = InferFromConstructor
+		}
+		for _, v := range sources[attr] {
+			if len(paramTypes[v]) != 1 {
+				undetermined = true // untyped or ambiguously typed source variable
+				continue
+			}
+			for t := range paramTypes[v] {
+				if _, seen := types[t]; !seen {
+					types[t] = InferFromParamType
+				}
+			}
+		}
+		if undetermined || len(types) != 1 {
+			continue
+		}
+		for t, src := range types {
+			out = append(out, TypeHintCapture{VarName: "self." + attr, ResolvedType: t, InferenceSource: src})
+		}
+	}
+	return out
 }

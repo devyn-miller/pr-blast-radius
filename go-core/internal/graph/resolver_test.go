@@ -360,3 +360,98 @@ func TestResolver_CallOutsideAnySymbol_FallsBackToFileLevelNode(t *testing.T) {
 	assert.Equal(t, 0, unresolved)
 	assert.Equal(t, computeNodeID("main.go", "<file-level>"), edges[0].From)
 }
+
+// chainedSelfAttrFixture indexes two classes that both define apply_discount,
+// so an untyped self.pricing.apply_discount() is genuinely ambiguous (P5).
+func chainedSelfAttrFixture(t *testing.T, hints []astparse.TypeHintCapture) ([]Edge, int) {
+	t.Helper()
+	table := NewSymbolTable()
+	table.Index(astparse.FileCaptures{
+		FilePath: "pricing.py",
+		Symbols: []astparse.SymbolCapture{
+			{Name: "apply_discount", Kind: astparse.KindMethod, QualifiedHint: "DiscountEngine"},
+			{Name: "apply_discount", Kind: astparse.KindMethod, QualifiedHint: "LegacyPricer"},
+		},
+	})
+	table.Finalize(nil)
+
+	fc := astparse.FileCaptures{
+		FilePath: "order_service.py",
+		Symbols: []astparse.SymbolCapture{
+			{Name: "price", Kind: astparse.KindMethod, QualifiedHint: "OrderService", StartLine: 10, EndLine: 15},
+		},
+		Calls: []astparse.CallCapture{
+			{Kind: astparse.CallChained, OperandName: "self.pricing", MethodName: "apply_discount", SiteLine: 12},
+		},
+		TypeHints: hints,
+	}
+	return NewResolver(table).ResolveEdges(fc)
+}
+
+func TestResolver_ChainedSelfAttr_ParamTypedHint_UsesLocalInferenceConfidence(t *testing.T) {
+	edges, unresolved := chainedSelfAttrFixture(t, []astparse.TypeHintCapture{
+		{VarName: "self.pricing", ResolvedType: "DiscountEngine", InferenceSource: astparse.InferFromParamType},
+	})
+
+	require.Len(t, edges, 1, "a typed self.X must pick the one matching class, not duck-type both")
+	assert.Equal(t, 0, unresolved)
+	assert.Equal(t, computeNodeID("pricing.py", "DiscountEngine.apply_discount"), edges[0].To)
+	assert.Equal(t, ConfidenceLocalInference, edges[0].Confidence)
+	assert.Empty(t, edges[0].Tags)
+}
+
+func TestResolver_ChainedSelfAttr_ConstructorHint_UsesConstructorTrackConfidence(t *testing.T) {
+	edges, _ := chainedSelfAttrFixture(t, []astparse.TypeHintCapture{
+		{VarName: "self.pricing", ResolvedType: "LegacyPricer", InferenceSource: astparse.InferFromConstructor},
+	})
+
+	require.Len(t, edges, 1)
+	assert.Equal(t, computeNodeID("pricing.py", "LegacyPricer.apply_discount"), edges[0].To)
+	assert.Equal(t, ConfidenceConstructorTrack, edges[0].Confidence)
+}
+
+func TestResolver_ChainedSelfAttr_NoHint_KeepsDuckTypeBehavior(t *testing.T) {
+	// A hint for the bare param name must not leak onto self.pricing.
+	edges, unresolved := chainedSelfAttrFixture(t, []astparse.TypeHintCapture{
+		{VarName: "pricing", ResolvedType: "DiscountEngine", InferenceSource: astparse.InferFromParamType},
+	})
+
+	require.Len(t, edges, 2)
+	assert.Equal(t, 0, unresolved)
+	for _, e := range edges {
+		assert.Equal(t, ConfidenceDuckTypeAmbiguous, e.Confidence)
+		assert.Contains(t, e.Tags, "ambiguous_duck_type")
+	}
+}
+
+func TestResolver_ChainedSelfAttr_HintTypeWithoutMethod_FallsBackToDuckType(t *testing.T) {
+	// The hinted type has no such method: no typed edge is invented; the
+	// existing duck-type rule applies.
+	edges, _ := chainedSelfAttrFixture(t, []astparse.TypeHintCapture{
+		{VarName: "self.pricing", ResolvedType: "Unrelated", InferenceSource: astparse.InferFromParamType},
+	})
+
+	require.Len(t, edges, 2)
+	for _, e := range edges {
+		assert.Equal(t, ConfidenceDuckTypeAmbiguous, e.Confidence)
+	}
+}
+
+func TestResolver_ChainedSelfAttr_NothingMatches_ZeroEdges(t *testing.T) {
+	table := NewSymbolTable()
+	table.Finalize(nil)
+	fc := astparse.FileCaptures{
+		FilePath: "order_service.py",
+		Symbols:  []astparse.SymbolCapture{{Name: "price", Kind: astparse.KindMethod, StartLine: 1, EndLine: 5}},
+		Calls: []astparse.CallCapture{
+			{Kind: astparse.CallChained, OperandName: "self.pricing", MethodName: "apply_discount", SiteLine: 3},
+		},
+		TypeHints: []astparse.TypeHintCapture{
+			{VarName: "self.pricing", ResolvedType: "DiscountEngine", InferenceSource: astparse.InferFromParamType},
+		},
+	}
+
+	edges, unresolved := NewResolver(table).ResolveEdges(fc)
+	assert.Empty(t, edges)
+	assert.Equal(t, 1, unresolved)
+}

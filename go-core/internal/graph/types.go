@@ -90,6 +90,7 @@ func newEmptyGraph() *Graph {
 // class of bug that would otherwise be very easy to introduce silently
 // (e.g. someone appending to OutEdges directly and forgetting InEdges).
 func (g *Graph) addEdge(e Edge) {
+	e.Tags = nonNilTags(e.Tags)
 	g.OutEdges[e.From] = append(g.OutEdges[e.From], e)
 	g.InEdges[e.To] = append(g.InEdges[e.To], e)
 
@@ -101,4 +102,13 @@ func (g *Graph) addEdge(e Edge) {
 		n.InDegree++
 		g.Nodes[e.To] = n
 	}
+}
+
+// nonNilTags returns tags, or an empty slice if tags is nil, so Node.Tags
+// and Edge.Tags always marshal as [] rather than null for the Python client.
+func nonNilTags(tags []string) []string {
+	if tags == nil {
+		return []string{}
+	}
+	return tags
 }

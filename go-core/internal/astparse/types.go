@@ -18,6 +18,9 @@ const (
 	KindMethod    SymbolKind = "Method"
 	KindClass     SymbolKind = "Class"
 	KindInterface SymbolKind = "Interface"
+	// KindModule is the synthetic per-file node for calls made at module
+	// level, outside any function or class (e.g. Python service wiring).
+	KindModule SymbolKind = "Module"
 )
 
 // CallKind classifies HOW a call site was written syntactically. This is

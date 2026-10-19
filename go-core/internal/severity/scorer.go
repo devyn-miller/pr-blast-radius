@@ -9,10 +9,10 @@ import (
 // Weights are the four coefficients from the severity formula documented
 // in the requirements analysis:
 //
-//   severity_score = w1 * (1 / (1 + distance))
-//                  + w2 * normalized(in_degree)
-//                  + w3 * (1.0 if is_route_handler else 0.0)
-//                  + w4 * confidence_of_weakest_edge_on_path
+//	severity_score = w1 * (1 / (1 + distance))
+//	               + w2 * normalized(in_degree)
+//	               + w3 * (1.0 if is_route_handler else 0.0)
+//	               + w4 * confidence_of_weakest_edge_on_path
 //
 // Exposed as a struct (not four package-level consts) specifically so a
 // future experiment ("what if we weight fan-in higher for a demo repo
@@ -33,6 +33,24 @@ var DefaultWeights = Weights{
 	FanIn:        0.35,
 	RouteHandler: 0.20,
 	Confidence:   0.10,
+}
+
+// MaxReachableScore is the highest score Score can return for an AFFECTED
+// node, i.e. one at distance >= 1. Every other term can reach its own maximum
+// at once (graph-max fan-in, a route handler, a full-confidence path), but the
+// distance term is capped at 1/(1+1) because distance 0 is only ever a changed
+// root, which is never scored.
+//
+// This is what the risk-tier cutoffs downstream have to fit inside: a cutoff
+// above this value names a tier no node can ever be put in. Derived from the
+// weights rather than hardcoded so retuning them moves the ceiling with them.
+func MaxReachableScore(w Weights, isRoute bool) float64 {
+	const minAffectedDistance = 1
+	score := w.Distance*(1.0/(1.0+minAffectedDistance)) + w.FanIn*1.0 + w.Confidence*1.0
+	if isRoute {
+		score += w.RouteHandler * 1.0
+	}
+	return clamp01(score)
 }
 
 // Scorer is a stateless value once constructed — Score/Reasons take every
@@ -82,7 +100,7 @@ func (s *Scorer) Score(node graph.Node, distance int, weakestConfidenceOnPath fl
 // reviewer should be able to unit test "does this produce the right tag"
 // without asserting on a specific float value.
 func (s *Scorer) Reasons(node graph.Node, distance int, weakestConfidenceOnPath float32) []string {
-	var reasons []string
+	reasons := []string{} // non-nil: marshals as [], not null
 
 	if isRouteHandler(node) {
 		reasons = append(reasons, "is_route_handler")

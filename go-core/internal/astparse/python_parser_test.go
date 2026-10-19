@@ -2,6 +2,7 @@ package astparse
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -147,4 +148,78 @@ func TestDebug_PrintPythonTree(t *testing.T) {
 	require.NoError(t, err)
 	defer tree.Close()
 	t.Log(tree.RootNode().String())
+}
+func selfAttrHints(t *testing.T, src string) map[string]TypeHintCapture {
+	t.Helper()
+	parser, err := NewPythonParser()
+	require.NoError(t, err)
+	fc, err := parser.Parse(context.Background(), "svc.py", []byte(src))
+	require.NoError(t, err)
+	out := map[string]TypeHintCapture{}
+	for _, h := range fc.TypeHints {
+		if strings.HasPrefix(h.VarName, "self.") {
+			out[h.VarName] = h
+		}
+	}
+	return out
+}
+
+func TestPythonParser_SelfAttrHints_FromTypedParamAndConstructor(t *testing.T) {
+	hints := selfAttrHints(t, `
+class OrderService:
+    def __init__(self, pricing: DiscountEngine):
+        self.pricing = pricing
+        self.inventory = InventoryService()
+`)
+
+	require.Contains(t, hints, "self.pricing")
+	assert.Equal(t, "DiscountEngine", hints["self.pricing"].ResolvedType)
+	assert.Equal(t, InferFromParamType, hints["self.pricing"].InferenceSource)
+
+	require.Contains(t, hints, "self.inventory")
+	assert.Equal(t, "InventoryService", hints["self.inventory"].ResolvedType)
+	assert.Equal(t, InferFromConstructor, hints["self.inventory"].InferenceSource)
+}
+
+func TestPythonParser_SelfAttrHints_UndeterminedTypesProduceNoHint(t *testing.T) {
+	hints := selfAttrHints(t, `
+class A:
+    def __init__(self, raw, other):
+        self.untyped = raw
+        self.engine = DiscountEngine()
+        other.engine = LegacyPricer()
+
+class B:
+    def __init__(self):
+        self.engine = LegacyPricer()
+`)
+
+	assert.NotContains(t, hints, "self.untyped", "untyped source variable: type unknown")
+	assert.NotContains(t, hints, "self.engine", "conflicting types for self.engine in one file")
+	assert.NotContains(t, hints, "other.engine", "only attributes of self are tracked")
+	assert.Empty(t, hints)
+}
+
+func TestPythonParser_ChainedSelfCall_OperandMatchesSelfAttrHintKey(t *testing.T) {
+	parser, err := NewPythonParser()
+	require.NoError(t, err)
+	fc, err := parser.Parse(context.Background(), "svc.py", []byte(`
+class OrderService:
+    def __init__(self, pricing: DiscountEngine):
+        self.pricing = pricing
+
+    def price(self, base, tier):
+        return self.pricing.apply_discount(base, tier)
+`))
+	require.NoError(t, err)
+
+	var chained *CallCapture
+	for i := range fc.Calls {
+		if fc.Calls[i].MethodName == "apply_discount" {
+			chained = &fc.Calls[i]
+		}
+	}
+	require.NotNil(t, chained)
+	assert.Equal(t, CallChained, chained.Kind)
+	assert.Equal(t, "self.pricing", chained.OperandName, "must equal the hint key the resolver looks up")
 }

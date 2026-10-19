@@ -32,6 +32,10 @@ type BlastRadiusResult struct {
 	TotalNodesAffected  int
 	TotalEdgesTraversed int
 	ExecutionTime       time.Duration
+	// DeletedFilesNotAnalyzed lists changed files that are gone from disk and
+	// therefore contribute no nodes to the graph, so nothing in them can be a
+	// root or be reached. Callers surface these as a gap in the analysis.
+	DeletedFilesNotAnalyzed []string
 }
 
 // SeverityScorer is the minimal interface graph needs from package
@@ -69,7 +73,7 @@ func (t *Traverser) ComputeBlastRadius(roots []ChangedSymbol, maxDepth int) Blas
 	start := time.Now()
 
 	visited := make(map[NodeID]bool)
-	var affected []AffectedNode
+	affected := []AffectedNode{} // non-nil: marshals as [], not null
 	edgesTraversed := 0
 
 	queue := make([]bfsQueueItem, 0, len(roots))
@@ -125,6 +129,9 @@ func (t *Traverser) ComputeBlastRadius(roots []ChangedSymbol, maxDepth int) Blas
 		TotalNodesAffected:  len(affected),
 		TotalEdgesTraversed: edgesTraversed,
 		ExecutionTime:       time.Since(start),
+		// Non-nil so it marshals as [], not null: the Python model decodes
+		// this as list[str].
+		DeletedFilesNotAnalyzed: []string{},
 	}
 }
 
