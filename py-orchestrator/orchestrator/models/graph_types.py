@@ -6,12 +6,12 @@ class ChangedSymbol(BaseModel):
     ChangeType: str  # "Added" | "Modified" | "Deleted" | "SignatureChanged"
 
 class GraphMetadata(BaseModel):
-    repo_path: str = ""
-    commit_sha: str = ""
-    generated_at: datetime | None = None
-    tool_version: str = ""
-    cache_hit_ratio: float = 0.0
-    unresolved_call_count: int = 0
+    RepoPath: str = ""
+    CommitSHA: str = ""
+    GeneratedAt: datetime | None = None
+    ToolVersion: str = ""
+    CacheHitRatio: float = 0.0
+    UnresolvedCallCount: int = 0
 
 class Node(BaseModel):
     ID: str
@@ -27,12 +27,17 @@ class Node(BaseModel):
     OutDegree: int = 0
     Tags: list[str] | None = None
 
+class CallSite(BaseModel):
+    File: str = ""
+    Line: int = 0
+
 class Edge(BaseModel):
     From: str
     To: str
     Type: str
     Confidence: float
     Tags: list[str] | None = None
+    Site: CallSite = Field(default_factory=CallSite)
 
 class Graph(BaseModel):
     Nodes: dict[str, Node]
@@ -53,6 +58,10 @@ class BlastRadiusResult(BaseModel):
     MaxDepthUsed: int
     TotalNodesAffected: int
     TotalEdgesTraversed: int
+    ExecutionTime: int = 0  # Go time.Duration: integer nanoseconds
+    # Changed files that are gone from disk, so they contribute no nodes to the
+    # graph and nothing in them can appear as a root or as affected.
+    DeletedFilesNotAnalyzed: list[str] = Field(default_factory=list)
 
 class SymbolSourceResult(BaseModel):
     symbol_id: str

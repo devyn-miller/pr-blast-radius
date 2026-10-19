@@ -16,6 +16,14 @@ import (
 
 func main() {
 	rootCmd := &cobra.Command{Use: "blastradius"}
+	printSchemaFlag := rootCmd.Flags().Bool("print-schema", false,
+		"Print the JSON field names of every type sent to the Python client, then exit")
+	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if *printSchemaFlag {
+			return printSchema(cmd.OutOrStdout())
+		}
+		return cmd.Help()
+	}
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "mcp-serve",

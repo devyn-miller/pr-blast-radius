@@ -23,7 +23,6 @@
 // 	return string(data), nil
 // }
 
-
 // go-core/internal/astparse/embed.go
 package astparse
 

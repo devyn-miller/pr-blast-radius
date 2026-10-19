@@ -1,6 +1,7 @@
+import os
 from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp.client.stdio import get_default_environment, stdio_client
 from pydantic import TypeAdapter
 
 from orchestrator.models.graph_types import (
@@ -17,7 +18,12 @@ class BlastRadiusMCPClient:
         self._session: ClientSession | None = None
 
     async def __aenter__(self) -> "BlastRadiusMCPClient":
-        params = StdioServerParameters(command=self._binary_path, args=["mcp-serve"])
+        # stdio_client only forwards a small allowlist of env vars (HOME,
+        # PATH, ...), so anything the Go server reads must be passed explicitly.
+        env = get_default_environment()
+        if cache_db := os.getenv("BLASTRADIUS_CACHE_DB"):
+            env["BLASTRADIUS_CACHE_DB"] = cache_db
+        params = StdioServerParameters(command=self._binary_path, args=["mcp-serve"], env=env)
         read, write = await self._stack.enter_async_context(stdio_client(params))
         self._session = await self._stack.enter_async_context(ClientSession(read, write))
         await self._session.initialize()

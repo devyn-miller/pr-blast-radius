@@ -1,12 +1,19 @@
 package graph
 
-import "github.com/devyn-miller/pr-blast-radius/go-core/internal/gitdiff"
+import (
+	"cmp"
+	"slices"
+
+	"github.com/devyn-miller/pr-blast-radius/go-core/internal/gitdiff"
+)
 
 // MapHunksToSymbols is the general form of resolver.go's findEnclosingSymbol
 // — given changed line ranges per file, find which already-indexed nodes
 // in an already-built Graph overlap those ranges.
 func MapHunksToSymbols(g *Graph, diffs []gitdiff.FileDiff) []ChangedSymbol {
-	var changed []ChangedSymbol
+	// Non-nil so an empty result marshals as [] rather than null; the
+	// Python client decodes this as list[ChangedSymbol].
+	changed := []ChangedSymbol{}
 	seen := make(map[NodeID]bool)
 
 	for _, diff := range diffs {
@@ -28,7 +35,43 @@ func MapHunksToSymbols(g *Graph, diffs []gitdiff.FileDiff) []ChangedSymbol {
 			}
 		}
 	}
+
+	// g.Nodes (and the diffs, which come from go-git's status map) iterate
+	// in random order. Sort so RootSymbols, and therefore BFS order, the
+	// path chosen per affected node and its severity, are reproducible.
+	slices.SortFunc(changed, func(a, b ChangedSymbol) int {
+		na, nb := g.Nodes[a.SymbolID], g.Nodes[b.SymbolID]
+		return cmp.Or(
+			cmp.Compare(na.FilePath, nb.FilePath),
+			cmp.Compare(na.StartLine, nb.StartLine),
+			cmp.Compare(a.SymbolID, b.SymbolID),
+		)
+	})
 	return changed
+}
+
+// UnanalyzedDeletedFiles returns the paths of deleted files that have no nodes
+// in g, sorted. The graph is built by walking the files currently on disk, so a
+// file deleted in the diff is normally absent from it entirely: its symbols can
+// be neither roots nor reachable, and that gap is invisible in the result
+// unless it is reported explicitly. A deletion that was since restored on disk
+// still has nodes and is not reported.
+func UnanalyzedDeletedFiles(g *Graph, diffs []gitdiff.FileDiff) []string {
+	withNodes := make(map[string]bool, len(g.Nodes))
+	for _, node := range g.Nodes {
+		withNodes[node.FilePath] = true
+	}
+
+	// Non-nil so an empty result marshals as [] rather than null.
+	paths := []string{}
+	for _, diff := range diffs {
+		if diff.ChangeType == gitdiff.ChangeDeleted && !withNodes[diff.FilePath] {
+			paths = append(paths, diff.FilePath)
+		}
+	}
+	// go-git's status map iterates in random order.
+	slices.Sort(paths)
+	return paths
 }
 
 func rangesOverlap(aStart, aEnd, bStart, bEnd int) bool {

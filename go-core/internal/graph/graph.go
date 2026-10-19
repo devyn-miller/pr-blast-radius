@@ -64,7 +64,7 @@ func BuildGraph(ctx context.Context, registry FileParser, files []FileSource) (*
 				ID: id, Kind: sym.Kind, FilePath: fc.FilePath, Name: sym.Name,
 				QualifiedName: qualifiedName, Language: fc.Language,
 				Exported: sym.Exported, StartLine: sym.StartLine, EndLine: sym.EndLine,
-				Tags: sym.DecoratorTags,
+				Tags: nonNilTags(sym.DecoratorTags),
 			}
 		}
 	}
@@ -75,9 +75,13 @@ func BuildGraph(ctx context.Context, registry FileParser, files []FileSource) (*
 	for _, fc := range captures {
 		edges, unresolved := resolver.ResolveEdges(fc)
 		totalUnresolved += unresolved
+		fileLevelID := resolver.fileLevelNodeID(fc)
 		for _, e := range edges {
 			if e.To == unresolvedSentinelID {
 				ensureSentinelNode(g)
+			}
+			if e.From == fileLevelID {
+				ensureFileLevelNode(g, fc, fileLevelID)
 			}
 			g.addEdge(e)
 		}
@@ -93,6 +97,21 @@ func ensureSentinelNode(g *Graph) {
 	}
 	g.Nodes[unresolvedSentinelID] = Node{
 		ID: unresolvedSentinelID, Kind: "Unknown", Name: "<unresolved reflective target>",
+		Tags: []string{},
+	}
+}
+
+// ensureFileLevelNode registers the synthetic module node that calls made
+// outside any function or class are attributed to. Without it those edges
+// point from an ID with no Node, and a traversal that reaches it reports an
+// affected node with no name, location or severity reasons.
+func ensureFileLevelNode(g *Graph, fc astparse.FileCaptures, id NodeID) {
+	if _, exists := g.Nodes[id]; exists {
+		return
+	}
+	g.Nodes[id] = Node{
+		ID: id, Kind: astparse.KindModule, FilePath: fc.FilePath, Language: fc.Language,
+		Name: "<module>", QualifiedName: "<module>", Tags: []string{},
 	}
 }
 

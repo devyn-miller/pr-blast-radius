@@ -1,0 +1,702 @@
+{
+  "InEdges": {
+    "0208706ac4c993a1869cc6231a7e9ed30f4caa82": [
+      {
+        "Confidence": 0.8,
+        "From": "0faf55683ce2028edbae39dd25d8afdc64e6d053",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 24
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 0.8,
+        "From": "2f16289fe6863f160bcf8589294c8cf0627c4151",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 30
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 0.8,
+        "From": "cc59ebef16befbb7d92ca38b8dd83b8785c18d48",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 36
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 0.8,
+        "From": "55881afe88659d13b8ece219e7d187be706421c0",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 42
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      }
+    ],
+    "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c": [
+      {
+        "Confidence": 0.9,
+        "From": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 19
+        },
+        "Tags": [],
+        "To": "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "Type": "Calls"
+      }
+    ],
+    "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8": [
+      {
+        "Confidence": 1.0,
+        "From": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 1.0,
+        "From": "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "Site": {
+          "File": "services/pricing/discount_engine.py",
+          "Line": 23
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 1.0,
+        "From": "dff3cb4604cb5fa8ea21d89240b0e223c742c707",
+        "Site": {
+          "File": "shared/money.py",
+          "Line": 15
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 1.0,
+        "From": "8830561394258a58eb7dcb4f4223d5de4e9c4c0e",
+        "Site": {
+          "File": "shared/money.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      }
+    ],
+    "477475773873a3bc0acb7c6c757bf7a09f8e1311": [
+      {
+        "Confidence": 1.0,
+        "From": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "477475773873a3bc0acb7c6c757bf7a09f8e1311",
+        "Type": "Calls"
+      }
+    ],
+    "7f7badd64f184f2d395372af55ccba7eff4dbdb9": [
+      {
+        "Confidence": 1.0,
+        "From": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 19
+        },
+        "Tags": [],
+        "To": "7f7badd64f184f2d395372af55ccba7eff4dbdb9",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 1.0,
+        "From": "f8d46233d9af6b37c5f3ff95d84f36f29ee31e89",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 10
+        },
+        "Tags": [],
+        "To": "7f7badd64f184f2d395372af55ccba7eff4dbdb9",
+        "Type": "Calls"
+      }
+    ],
+    "9e4665efb1231aa703f9d93738c6775f2c3937d2": [
+      {
+        "Confidence": 1.0,
+        "From": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "9e4665efb1231aa703f9d93738c6775f2c3937d2",
+        "Type": "Calls"
+      }
+    ],
+    "fa8600b950ae1bbca5751ca74e5d4ea174e372c6": [
+      {
+        "Confidence": 0.8,
+        "From": "5a19b06b2daaf529f77bc258f10983026268aa68",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 48
+        },
+        "Tags": [],
+        "To": "fa8600b950ae1bbca5751ca74e5d4ea174e372c6",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 0.8,
+        "From": "0c531188dad192518b9a19869976d2f006faa9df",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 28
+        },
+        "Tags": [],
+        "To": "fa8600b950ae1bbca5751ca74e5d4ea174e372c6",
+        "Type": "Calls"
+      }
+    ]
+  },
+  "Metadata": {
+    "CacheHitRatio": 0.0,
+    "CommitSHA": "",
+    "GeneratedAt": "0001-01-01T00:00:00Z",
+    "RepoPath": "examples/tinyshop",
+    "ToolVersion": "",
+    "UnresolvedCallCount": 20
+  },
+  "Nodes": {
+    "0208706ac4c993a1869cc6231a7e9ed30f4caa82": {
+      "EndLine": 19,
+      "Exported": true,
+      "FilePath": "services/order_service.py",
+      "ID": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+      "InDegree": 4,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "price",
+      "OutDegree": 2,
+      "QualifiedName": "OrderService.price",
+      "StartLine": 12,
+      "Tags": []
+    },
+    "0c531188dad192518b9a19869976d2f006faa9df": {
+      "EndLine": 28,
+      "Exported": true,
+      "FilePath": "services/order_service.py",
+      "ID": "0c531188dad192518b9a19869976d2f006faa9df",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "reserve_inventory",
+      "OutDegree": 1,
+      "QualifiedName": "OrderService.reserve_inventory",
+      "StartLine": 21,
+      "Tags": []
+    },
+    "0faf55683ce2028edbae39dd25d8afdc64e6d053": {
+      "EndLine": 25,
+      "Exported": true,
+      "FilePath": "api/routes.py",
+      "ID": "0faf55683ce2028edbae39dd25d8afdc64e6d053",
+      "InDegree": 0,
+      "Kind": "Function",
+      "Language": "python",
+      "Name": "create_order",
+      "OutDegree": 1,
+      "QualifiedName": "create_order",
+      "StartLine": 23,
+      "Tags": [
+        "route:POST:/orders"
+      ]
+    },
+    "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c": {
+      "EndLine": 23,
+      "Exported": true,
+      "FilePath": "services/pricing/discount_engine.py",
+      "ID": "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+      "InDegree": 1,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "apply_discount",
+      "OutDegree": 1,
+      "QualifiedName": "DiscountEngine.apply_discount",
+      "StartLine": 9,
+      "Tags": []
+    },
+    "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8": {
+      "EndLine": 18,
+      "Exported": true,
+      "FilePath": "shared/money.py",
+      "ID": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+      "InDegree": 4,
+      "Kind": "Class",
+      "Language": "python",
+      "Name": "Money",
+      "OutDegree": 0,
+      "QualifiedName": "Money",
+      "StartLine": 4,
+      "Tags": []
+    },
+    "2f16289fe6863f160bcf8589294c8cf0627c4151": {
+      "EndLine": 31,
+      "Exported": true,
+      "FilePath": "api/routes.py",
+      "ID": "2f16289fe6863f160bcf8589294c8cf0627c4151",
+      "InDegree": 0,
+      "Kind": "Function",
+      "Language": "python",
+      "Name": "quote_order",
+      "OutDegree": 1,
+      "QualifiedName": "quote_order",
+      "StartLine": 29,
+      "Tags": [
+        "route:POST:/quote"
+      ]
+    },
+    "477475773873a3bc0acb7c6c757bf7a09f8e1311": {
+      "EndLine": 23,
+      "Exported": true,
+      "FilePath": "services/pricing/discount_engine.py",
+      "ID": "477475773873a3bc0acb7c6c757bf7a09f8e1311",
+      "InDegree": 1,
+      "Kind": "Class",
+      "Language": "python",
+      "Name": "DiscountEngine",
+      "OutDegree": 0,
+      "QualifiedName": "DiscountEngine",
+      "StartLine": 5,
+      "Tags": []
+    },
+    "55881afe88659d13b8ece219e7d187be706421c0": {
+      "EndLine": 43,
+      "Exported": true,
+      "FilePath": "api/routes.py",
+      "ID": "55881afe88659d13b8ece219e7d187be706421c0",
+      "InDegree": 0,
+      "Kind": "Function",
+      "Language": "python",
+      "Name": "checkout",
+      "OutDegree": 1,
+      "QualifiedName": "checkout",
+      "StartLine": 41,
+      "Tags": [
+        "route:POST:/checkout"
+      ]
+    },
+    "5a19b06b2daaf529f77bc258f10983026268aa68": {
+      "EndLine": 49,
+      "Exported": true,
+      "FilePath": "api/routes.py",
+      "ID": "5a19b06b2daaf529f77bc258f10983026268aa68",
+      "InDegree": 0,
+      "Kind": "Function",
+      "Language": "python",
+      "Name": "reserve_stock",
+      "OutDegree": 1,
+      "QualifiedName": "reserve_stock",
+      "StartLine": 47,
+      "Tags": [
+        "route:GET:/inventory/<sku>"
+      ]
+    },
+    "5c2de37ea1db35202da252ca81f7cd0bab1c97d7": {
+      "EndLine": 5,
+      "Exported": false,
+      "FilePath": "services/inventory_service.py",
+      "ID": "5c2de37ea1db35202da252ca81f7cd0bab1c97d7",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "__init__",
+      "OutDegree": 0,
+      "QualifiedName": "InventoryService.__init__",
+      "StartLine": 4,
+      "Tags": []
+    },
+    "7bc8af6f92664a1c62ac31750e32f0e34af1e3c3": {
+      "EndLine": 7,
+      "Exported": false,
+      "FilePath": "shared/money.py",
+      "ID": "7bc8af6f92664a1c62ac31750e32f0e34af1e3c3",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "__init__",
+      "OutDegree": 0,
+      "QualifiedName": "Money.__init__",
+      "StartLine": 5,
+      "Tags": []
+    },
+    "7f7badd64f184f2d395372af55ccba7eff4dbdb9": {
+      "EndLine": 17,
+      "Exported": true,
+      "FilePath": "services/inventory_service.py",
+      "ID": "7f7badd64f184f2d395372af55ccba7eff4dbdb9",
+      "InDegree": 2,
+      "Kind": "Class",
+      "Language": "python",
+      "Name": "InventoryService",
+      "OutDegree": 0,
+      "QualifiedName": "InventoryService",
+      "StartLine": 3,
+      "Tags": []
+    },
+    "870f7c6486da826a87a538972a1ba0c38d2a132f": {
+      "EndLine": 0,
+      "Exported": false,
+      "FilePath": "api/routes.py",
+      "ID": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+      "InDegree": 0,
+      "Kind": "Module",
+      "Language": "python",
+      "Name": "<module>",
+      "OutDegree": 3,
+      "QualifiedName": "<module>",
+      "StartLine": 0,
+      "Tags": []
+    },
+    "8830561394258a58eb7dcb4f4223d5de4e9c4c0e": {
+      "EndLine": 18,
+      "Exported": false,
+      "FilePath": "shared/money.py",
+      "ID": "8830561394258a58eb7dcb4f4223d5de4e9c4c0e",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "__mul__",
+      "OutDegree": 1,
+      "QualifiedName": "Money.__mul__",
+      "StartLine": 17,
+      "Tags": []
+    },
+    "9e4665efb1231aa703f9d93738c6775f2c3937d2": {
+      "EndLine": 28,
+      "Exported": true,
+      "FilePath": "services/order_service.py",
+      "ID": "9e4665efb1231aa703f9d93738c6775f2c3937d2",
+      "InDegree": 1,
+      "Kind": "Class",
+      "Language": "python",
+      "Name": "OrderService",
+      "OutDegree": 0,
+      "QualifiedName": "OrderService",
+      "StartLine": 7,
+      "Tags": []
+    },
+    "aaf60c3c8492ebeaa63cadbff42cf9b9efbc565c": {
+      "EndLine": 17,
+      "Exported": true,
+      "FilePath": "services/inventory_service.py",
+      "ID": "aaf60c3c8492ebeaa63cadbff42cf9b9efbc565c",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "release",
+      "OutDegree": 0,
+      "QualifiedName": "InventoryService.release",
+      "StartLine": 15,
+      "Tags": []
+    },
+    "b14fc3b3013edfe8c5f0fd91aab4bd495dec1ae3": {
+      "EndLine": 7,
+      "Exported": false,
+      "FilePath": "services/pricing/discount_engine.py",
+      "ID": "b14fc3b3013edfe8c5f0fd91aab4bd495dec1ae3",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "__init__",
+      "OutDegree": 0,
+      "QualifiedName": "DiscountEngine.__init__",
+      "StartLine": 6,
+      "Tags": []
+    },
+    "c1f20bd73580e9cf5518f3497cb8360119208e56": {
+      "EndLine": 10,
+      "Exported": false,
+      "FilePath": "shared/money.py",
+      "ID": "c1f20bd73580e9cf5518f3497cb8360119208e56",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "__repr__",
+      "OutDegree": 0,
+      "QualifiedName": "Money.__repr__",
+      "StartLine": 9,
+      "Tags": []
+    },
+    "cc59ebef16befbb7d92ca38b8dd83b8785c18d48": {
+      "EndLine": 37,
+      "Exported": true,
+      "FilePath": "api/routes.py",
+      "ID": "cc59ebef16befbb7d92ca38b8dd83b8785c18d48",
+      "InDegree": 0,
+      "Kind": "Function",
+      "Language": "python",
+      "Name": "price_cart",
+      "OutDegree": 1,
+      "QualifiedName": "price_cart",
+      "StartLine": 35,
+      "Tags": [
+        "route:POST:/cart"
+      ]
+    },
+    "dff3cb4604cb5fa8ea21d89240b0e223c742c707": {
+      "EndLine": 15,
+      "Exported": false,
+      "FilePath": "shared/money.py",
+      "ID": "dff3cb4604cb5fa8ea21d89240b0e223c742c707",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "__add__",
+      "OutDegree": 1,
+      "QualifiedName": "Money.__add__",
+      "StartLine": 12,
+      "Tags": []
+    },
+    "f8d46233d9af6b37c5f3ff95d84f36f29ee31e89": {
+      "EndLine": 10,
+      "Exported": false,
+      "FilePath": "services/order_service.py",
+      "ID": "f8d46233d9af6b37c5f3ff95d84f36f29ee31e89",
+      "InDegree": 0,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "__init__",
+      "OutDegree": 1,
+      "QualifiedName": "OrderService.__init__",
+      "StartLine": 8,
+      "Tags": []
+    },
+    "fa8600b950ae1bbca5751ca74e5d4ea174e372c6": {
+      "EndLine": 13,
+      "Exported": true,
+      "FilePath": "services/inventory_service.py",
+      "ID": "fa8600b950ae1bbca5751ca74e5d4ea174e372c6",
+      "InDegree": 2,
+      "Kind": "Method",
+      "Language": "python",
+      "Name": "reserve",
+      "OutDegree": 0,
+      "QualifiedName": "InventoryService.reserve",
+      "StartLine": 7,
+      "Tags": []
+    }
+  },
+  "OutEdges": {
+    "0208706ac4c993a1869cc6231a7e9ed30f4caa82": [
+      {
+        "Confidence": 1.0,
+        "From": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 0.9,
+        "From": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 19
+        },
+        "Tags": [],
+        "To": "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "Type": "Calls"
+      }
+    ],
+    "0c531188dad192518b9a19869976d2f006faa9df": [
+      {
+        "Confidence": 0.8,
+        "From": "0c531188dad192518b9a19869976d2f006faa9df",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 28
+        },
+        "Tags": [],
+        "To": "fa8600b950ae1bbca5751ca74e5d4ea174e372c6",
+        "Type": "Calls"
+      }
+    ],
+    "0faf55683ce2028edbae39dd25d8afdc64e6d053": [
+      {
+        "Confidence": 0.8,
+        "From": "0faf55683ce2028edbae39dd25d8afdc64e6d053",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 24
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      }
+    ],
+    "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c": [
+      {
+        "Confidence": 1.0,
+        "From": "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "Site": {
+          "File": "services/pricing/discount_engine.py",
+          "Line": 23
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      }
+    ],
+    "2f16289fe6863f160bcf8589294c8cf0627c4151": [
+      {
+        "Confidence": 0.8,
+        "From": "2f16289fe6863f160bcf8589294c8cf0627c4151",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 30
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      }
+    ],
+    "55881afe88659d13b8ece219e7d187be706421c0": [
+      {
+        "Confidence": 0.8,
+        "From": "55881afe88659d13b8ece219e7d187be706421c0",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 42
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      }
+    ],
+    "5a19b06b2daaf529f77bc258f10983026268aa68": [
+      {
+        "Confidence": 0.8,
+        "From": "5a19b06b2daaf529f77bc258f10983026268aa68",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 48
+        },
+        "Tags": [],
+        "To": "fa8600b950ae1bbca5751ca74e5d4ea174e372c6",
+        "Type": "Calls"
+      }
+    ],
+    "870f7c6486da826a87a538972a1ba0c38d2a132f": [
+      {
+        "Confidence": 1.0,
+        "From": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "9e4665efb1231aa703f9d93738c6775f2c3937d2",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 1.0,
+        "From": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "477475773873a3bc0acb7c6c757bf7a09f8e1311",
+        "Type": "Calls"
+      },
+      {
+        "Confidence": 1.0,
+        "From": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 19
+        },
+        "Tags": [],
+        "To": "7f7badd64f184f2d395372af55ccba7eff4dbdb9",
+        "Type": "Calls"
+      }
+    ],
+    "8830561394258a58eb7dcb4f4223d5de4e9c4c0e": [
+      {
+        "Confidence": 1.0,
+        "From": "8830561394258a58eb7dcb4f4223d5de4e9c4c0e",
+        "Site": {
+          "File": "shared/money.py",
+          "Line": 18
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      }
+    ],
+    "cc59ebef16befbb7d92ca38b8dd83b8785c18d48": [
+      {
+        "Confidence": 0.8,
+        "From": "cc59ebef16befbb7d92ca38b8dd83b8785c18d48",
+        "Site": {
+          "File": "api/routes.py",
+          "Line": 36
+        },
+        "Tags": [],
+        "To": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "Type": "Calls"
+      }
+    ],
+    "dff3cb4604cb5fa8ea21d89240b0e223c742c707": [
+      {
+        "Confidence": 1.0,
+        "From": "dff3cb4604cb5fa8ea21d89240b0e223c742c707",
+        "Site": {
+          "File": "shared/money.py",
+          "Line": 15
+        },
+        "Tags": [],
+        "To": "1a5c375b0cb0feb6925733fa15aa3ae906e9c1a8",
+        "Type": "Calls"
+      }
+    ],
+    "f8d46233d9af6b37c5f3ff95d84f36f29ee31e89": [
+      {
+        "Confidence": 1.0,
+        "From": "f8d46233d9af6b37c5f3ff95d84f36f29ee31e89",
+        "Site": {
+          "File": "services/order_service.py",
+          "Line": 10
+        },
+        "Tags": [],
+        "To": "7f7badd64f184f2d395372af55ccba7eff4dbdb9",
+        "Type": "Calls"
+      }
+    ]
+  }
+}

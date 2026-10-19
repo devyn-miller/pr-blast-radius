@@ -7,6 +7,7 @@ ever reaching the user — the LLM generates STRUCTURED DATA, then this
 compiler renders it, never letting the LLM write raw Mermaid syntax.
 """
 import pytest
+from pydantic import ValidationError
 from orchestrator.render import compile_mermaid, _escape
 from orchestrator.models.mermaid_ir import (
     MermaidDiagramSpec, SubgraphSpec, NodeStyle, EdgeSpec, NarrativeItem
@@ -212,3 +213,12 @@ def test_compile_mermaid_node_not_in_any_subgraph():
     # (based on the compiler logic, nodes only render inside subgraphs)
     # This is a design choice: nodes must be in subgraphs to be visible
     assert 'orphan["Standalone Node"]' not in result
+
+
+def test_edges_referencing_unknown_node_raises_validation_error():
+    with pytest.raises(ValidationError, match="unknown node"):
+        MermaidDiagramSpec(
+            subgraphs=[], nodes=[NodeStyle(id="a", label="A", risk_tier="high")],
+            edges=[EdgeSpec(from_id="a", to_id="ghost")],  # "ghost" doesn't exist in nodes
+            narratives=[],
+        )

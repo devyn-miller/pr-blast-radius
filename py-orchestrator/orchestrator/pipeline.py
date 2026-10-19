@@ -8,6 +8,7 @@ from orchestrator.models.graph_types import ChangedSymbol, Graph, BlastRadiusRes
 from orchestrator.models.mermaid_ir import MermaidDiagramSpec
 from orchestrator.render import compile_mermaid, render_all_outputs, OutputPaths
 from orchestrator.errors import NoChangesDetectedError, ProviderTransientError
+from orchestrator.spec_builder import build_spec
 from pydantic import ValidationError
 
 logger = logging.getLogger("blastradius")
@@ -39,26 +40,46 @@ class PipelineContext:
     output_paths: OutputPaths | None = None
 
 
+def _one_line(err: Exception) -> str:
+    """Pydantic errors span several lines; keep each log record on one."""
+    return " | ".join(line.strip() for line in str(err).splitlines() if line.strip())
+
+
 async def generate_validated_spec(provider, blast_radius, graph, source_snippets):
+    """Build the diagram deterministically, then let the provider add narratives.
+
+    Structure (nodes, labels, tiers, subgraphs, edges) always comes from
+    build_spec; the provider can only contribute narratives, and an invalid
+    narrative set (unknown node, invented reason) is retried, then replaced by
+    template narratives.
+    """
+    spec = build_spec(blast_radius, graph)
     last_error = None
     for attempt in range(MAX_RETRIES + 1):
         try:
-            spec = await provider.generate_diagram_spec(
-                blast_radius, graph, source_snippets,
+            narratives = await provider.generate_narratives(
+                spec, blast_radius, graph, source_snippets,
                 previous_error=str(last_error) if last_error else None,
             )
-            return spec, GenerationOutcome(provider.name, attempt + 1, degraded=False)
+            return (spec.model_copy(update={"narratives": narratives}),
+                    GenerationOutcome(provider.name, attempt + 1, degraded=False))
         except (ValidationError, ValueError) as e:
-            last_error = e
-            logger.warning(f"[{provider.name}] attempt {attempt+1} validation failed: {e}")
+            last_error, last_kind = e, "validation error"
+            logger.warning(f"[{provider.name}] attempt {attempt+1}/{MAX_RETRIES+1} "
+                           f"validation failed: {_one_line(e)}")
         except ProviderTransientError as e:
-            last_error = e
-            logger.warning(f"[{provider.name}] transient error, attempt {attempt+1}: {e}")
+            last_error, last_kind = e, "provider error"
+            logger.warning(f"[{provider.name}] attempt {attempt+1}/{MAX_RETRIES+1} "
+                           f"transient error: {_one_line(e)}")
 
-    logger.warning(f"[{provider.name}] exhausted retries, degrading to template-only")
+    # Self-contained so the reason is visible even if the per-attempt lines
+    # scroll away (the CLI logs WARNING and above without --verbose).
+    logger.warning(f"[{provider.name}] degrading to template-only after {MAX_RETRIES+1} failed "
+                   f"attempts; last {last_kind} (attempt {MAX_RETRIES+1}): {_one_line(last_error)}")
     fallback = TemplateOnlyProvider()
-    spec = await fallback.generate_diagram_spec(blast_radius, graph, source_snippets)
-    return spec, GenerationOutcome(fallback.name, MAX_RETRIES + 1, degraded=True)
+    narratives = await fallback.generate_narratives(spec, blast_radius, graph, source_snippets)
+    return (spec.model_copy(update={"narratives": narratives}),
+            GenerationOutcome(fallback.name, MAX_RETRIES + 1, degraded=True))
 
 
 class Pipeline:
@@ -93,7 +114,15 @@ class Pipeline:
         return ctx
 
     async def _fetch_top_n_source(self, ctx):
-        top_n = sorted(ctx.blast_radius.AffectedNodes, key=lambda n: n.SeverityScore, reverse=True)[:ctx.top_n_for_source]
+        # Nodes with no source range (Go's synthetic Module node for
+        # module-level code, StartLine 0) have nothing to fetch, and Go
+        # rejects them; skip them rather than abort the run.
+        def has_source(an):
+            node = ctx.graph.Nodes.get(an.NodeID) if ctx.graph else None
+            return node is None or node.StartLine >= 1
+
+        candidates = [an for an in ctx.blast_radius.AffectedNodes if has_source(an)]
+        top_n = sorted(candidates, key=lambda n: n.SeverityScore, reverse=True)[:ctx.top_n_for_source]
         for node in top_n:
             result = await self._client.get_symbol_source(node.NodeID)
             ctx.source_snippets[node.NodeID] = result.source
@@ -114,5 +143,6 @@ class Pipeline:
         return ctx
 
     async def _render_outputs(self, ctx):
-        ctx.output_paths = await render_all_outputs(ctx.mermaid_text, ctx.blast_radius)
+        ctx.output_paths = await render_all_outputs(ctx.mermaid_text, ctx.blast_radius,
+                                                    spec=ctx.diagram_spec)
         return ctx

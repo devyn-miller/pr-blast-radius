@@ -1,12 +1,19 @@
 import asyncio, logging
 import typer
+from dotenv import find_dotenv, load_dotenv
 from rich import print as rprint
 
 from orchestrator.pipeline import Pipeline, PipelineContext
 from orchestrator.mcp_client import BlastRadiusMCPClient
-from orchestrator.errors import NoChangesDetectedError, MCPToolError
+from orchestrator.errors import NoChangesDetectedError, MCPToolError, ProviderUnavailableError
 
 app = typer.Typer()
+
+@app.callback()
+def main():
+    # No-op: registering a callback stops Typer from collapsing a
+    # single-command app into the root, so `scan` stays a subcommand.
+    pass
 
 def configure_logging(verbose: bool):
     logging.basicConfig(level=logging.DEBUG if verbose else logging.WARNING)
@@ -20,6 +27,9 @@ def scan(
     go_binary: str = typer.Option("./bin/blastradius"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ):
+    # Search upward from cwd so `make demo` (run from py-orchestrator/)
+    # finds the repo-root .env. Variables already in the environment win.
+    load_dotenv(find_dotenv(usecwd=True))
     configure_logging(verbose)
     asyncio.run(_run(repo, diff, max_depth, llm, go_binary))
 
@@ -35,6 +45,11 @@ async def _run(repo, diff, max_depth, llm, go_binary):
         except MCPToolError as e:
             rprint(f"[red]Go analysis engine error: {e}[/red]")
             raise typer.Exit(code=1)
+        except ProviderUnavailableError as e:
+            # Only raised for an explicitly requested provider (--llm gemini /
+            # ollama); `auto` falls through to the template instead.
+            rprint(f"[red]LLM provider '{llm}' unavailable: {e}[/red]")
+            raise typer.Exit(code=1)
 
     rprint(f"\n[bold]Rendered via:[/bold] {ctx.generation_outcome.provider} "
            f"({ctx.generation_outcome.attempts} attempt(s), degraded={ctx.generation_outcome.degraded})")
@@ -45,6 +60,14 @@ async def _run(repo, diff, max_depth, llm, go_binary):
     rprint(f"\n[bold]{ctx.blast_radius.TotalNodesAffected}[/bold] nodes affected, "
            f"max depth {ctx.blast_radius.MaxDepthUsed}, "
            f"{ctx.blast_radius.TotalEdgesTraversed} edges traversed.")
+
+    # The graph is built from the files on disk, so a deleted file has no nodes
+    # and its callers cannot be traced. Say so rather than reporting a blast
+    # radius that silently excludes it.
+    if ctx.blast_radius.DeletedFilesNotAnalyzed:
+        files = ", ".join(ctx.blast_radius.DeletedFilesNotAnalyzed)
+        rprint(f"[yellow]Warning: deleted file(s) not analyzed "
+               f"(no symbols in the current graph): {files}[/yellow]")
 
 if __name__ == "__main__":
     app()

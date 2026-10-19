@@ -1,10 +1,12 @@
 package graph
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/devyn-miller/pr-blast-radius/go-core/internal/gitdiff"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMapHunksToSymbols_ClassifiesSignatureVsBodyChange(t *testing.T) {
@@ -150,4 +152,31 @@ func TestMapHunksToSymbols_DeduplicatesSameSymbolAcrossMultipleHunks(t *testing.
 	changed := MapHunksToSymbols(g, diffs)
 
 	assert.Len(t, changed, 1, "same symbol touched by two hunks must be deduplicated")
+}
+func TestMapHunksToSymbols_OrderIsDeterministic_ByFileThenLine(t *testing.T) {
+	// g.Nodes is a map, so without an explicit sort the result order (and
+	// with it BFS order and the path chosen per affected node) would vary
+	// run to run. IDs are chosen so ID order differs from source order.
+	g := newEmptyGraph()
+	want := []NodeID{}
+	for i, f := range []string{"a.py", "b.py"} {
+		for line := 1; line <= 40; line += 4 {
+			id := NodeID(fmt.Sprintf("z%02d_%s", 99-line-i, f))
+			g.Nodes[id] = Node{ID: id, FilePath: f, StartLine: line, EndLine: line + 2}
+			want = append(want, id)
+		}
+	}
+	diffs := []gitdiff.FileDiff{
+		{FilePath: "b.py", ChangeType: gitdiff.ChangeModified, Hunks: []gitdiff.Hunk{{StartLine: 1, EndLine: 40}}},
+		{FilePath: "a.py", ChangeType: gitdiff.ChangeModified, Hunks: []gitdiff.Hunk{{StartLine: 1, EndLine: 40}}},
+	}
+
+	for run := 0; run < 50; run++ {
+		changed := MapHunksToSymbols(g, diffs)
+		got := make([]NodeID, len(changed))
+		for i, c := range changed {
+			got[i] = c.SymbolID
+		}
+		require.Equal(t, want, got, "run %d", run)
+	}
 }

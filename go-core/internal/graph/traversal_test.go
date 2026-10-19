@@ -10,9 +10,9 @@ import (
 
 // buildTestGraph constructs a small graph by hand:
 //
-//   A --calls--> B --calls--> C --calls--> A     (a 3-cycle: A<-B<-C<-A)
-//   D --calls--> B                                (D is a second entry point into the cycle)
-//   E --calls--> D                                (E is two hops from B)
+//	A --calls--> B --calls--> C --calls--> A     (a 3-cycle: A<-B<-C<-A)
+//	D --calls--> B                                (D is a second entry point into the cycle)
+//	E --calls--> D                                (E is two hops from B)
 //
 // Reverse traversal from B (the "changed" symbol) must find: A (dist 1),
 // D (dist 1), C (dist 2, via A), E (dist 2, via D) — and crucially must

@@ -1,0 +1,97 @@
+{
+  "AffectedNodes": [
+    {
+      "Distance": 1,
+      "NodeID": "870f7c6486da826a87a538972a1ba0c38d2a132f",
+      "Path": [
+        "477475773873a3bc0acb7c6c757bf7a09f8e1311",
+        "870f7c6486da826a87a538972a1ba0c38d2a132f"
+      ],
+      "SeverityReasons": [],
+      "SeverityScore": 0.275
+    },
+    {
+      "Distance": 1,
+      "NodeID": "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+      "Path": [
+        "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "0208706ac4c993a1869cc6231a7e9ed30f4caa82"
+      ],
+      "SeverityReasons": [
+        "public_api"
+      ],
+      "SeverityScore": 0.6149999976158141
+    },
+    {
+      "Distance": 2,
+      "NodeID": "0faf55683ce2028edbae39dd25d8afdc64e6d053",
+      "Path": [
+        "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "0faf55683ce2028edbae39dd25d8afdc64e6d053"
+      ],
+      "SeverityReasons": [
+        "is_route_handler",
+        "public_api"
+      ],
+      "SeverityScore": 0.39666666785875954
+    },
+    {
+      "Distance": 2,
+      "NodeID": "2f16289fe6863f160bcf8589294c8cf0627c4151",
+      "Path": [
+        "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "2f16289fe6863f160bcf8589294c8cf0627c4151"
+      ],
+      "SeverityReasons": [
+        "is_route_handler",
+        "public_api"
+      ],
+      "SeverityScore": 0.39666666785875954
+    },
+    {
+      "Distance": 2,
+      "NodeID": "cc59ebef16befbb7d92ca38b8dd83b8785c18d48",
+      "Path": [
+        "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "cc59ebef16befbb7d92ca38b8dd83b8785c18d48"
+      ],
+      "SeverityReasons": [
+        "is_route_handler",
+        "public_api"
+      ],
+      "SeverityScore": 0.39666666785875954
+    },
+    {
+      "Distance": 2,
+      "NodeID": "55881afe88659d13b8ece219e7d187be706421c0",
+      "Path": [
+        "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c",
+        "0208706ac4c993a1869cc6231a7e9ed30f4caa82",
+        "55881afe88659d13b8ece219e7d187be706421c0"
+      ],
+      "SeverityReasons": [
+        "is_route_handler",
+        "public_api"
+      ],
+      "SeverityScore": 0.39666666785875954
+    }
+  ],
+  "DeletedFilesNotAnalyzed": [],
+  "ExecutionTime": 0,
+  "MaxDepthUsed": 3,
+  "RootSymbols": [
+    {
+      "ChangeType": "Modified",
+      "SymbolID": "477475773873a3bc0acb7c6c757bf7a09f8e1311"
+    },
+    {
+      "ChangeType": "SignatureChanged",
+      "SymbolID": "15a3ec7ef1c21e519e0d30d36c58a920b3b1110c"
+    }
+  ],
+  "TotalEdgesTraversed": 6,
+  "TotalNodesAffected": 6
+}

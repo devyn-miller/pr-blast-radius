@@ -6,15 +6,17 @@ The Pipeline orchestrates the full flow:
 3. compute_blast_radius (MCP: compute_blast_radius)
 4. fetch_top_n_source (MCP: get_symbol_source for top N by severity)
 5. resolve_llm_provider (LLM fallback chain: Gemini → Ollama → Template)
-6. generate_diagram_spec (LLM: structured Pydantic output)
+6. generate_diagram_spec (deterministic spec; LLM writes narratives only)
 7. compile_mermaid (deterministic: spec → text)
 8. render_outputs (write .md and optional .svg)
 
 Each stage updates the PipelineContext and passes it to the next stage.
 """
+import json
+
 import pytest
 from unittest.mock import AsyncMock, patch
-from orchestrator.pipeline import Pipeline, PipelineContext, GenerationOutcome
+from orchestrator.pipeline import Pipeline, PipelineContext, GenerationOutcome, MAX_RETRIES
 from orchestrator.mcp_client import BlastRadiusMCPClient
 from orchestrator.models.graph_types import (
     ChangedSymbol, Graph, Node, BlastRadiusResult, AffectedNode, GraphMetadata
@@ -22,8 +24,9 @@ from orchestrator.models.graph_types import (
 from orchestrator.models.mermaid_ir import (
     MermaidDiagramSpec, SubgraphSpec, NodeStyle, EdgeSpec, NarrativeItem
 )
-from orchestrator.errors import NoChangesDetectedError
+from orchestrator.errors import NoChangesDetectedError, ProviderTransientError
 from orchestrator.llm.template_provider import TemplateOnlyProvider
+from orchestrator.spec_builder import build_spec, parse_narratives
 
 
 @pytest.fixture
@@ -186,6 +189,31 @@ async def test_pipeline_stage8_writes_markdown_output(mock_mcp_client, tmp_path)
 
 
 @pytest.mark.asyncio
+async def test_pipeline_stage4_skips_nodes_without_source_range(mock_mcp_client):
+    """Go's module-level node has StartLine 0; fetching its source would fail the run."""
+    mock_mcp_client.get_dependency_graph.return_value = Graph(Nodes={
+        "mod": Node(ID="mod", Kind="Module", FilePath="api/routes.py", Name="<module>",
+                    QualifiedName="<module>", Language="python", Exported=False, StartLine=0, EndLine=0),
+        "fn": Node(ID="fn", Kind="Function", FilePath="api/routes.py", Name="create_order",
+                   QualifiedName="create_order", Language="python", Exported=True, StartLine=5, EndLine=9),
+    })
+    mock_mcp_client.compute_blast_radius.return_value = BlastRadiusResult(
+        RootSymbols=[], MaxDepthUsed=3, TotalNodesAffected=2, TotalEdgesTraversed=2,
+        AffectedNodes=[
+            AffectedNode(NodeID="mod", Distance=1, Path=["mod"], SeverityScore=0.9),
+            AffectedNode(NodeID="fn", Distance=1, Path=["fn"], SeverityScore=0.4),
+        ],
+    )
+
+    pipeline = Pipeline(mock_mcp_client, llm_preference="none")
+    result_ctx = await pipeline.run(PipelineContext(repo_path="/fake", ref_range="HEAD~1", max_depth=3))
+
+    assert list(result_ctx.source_snippets) == ["fn"]
+    requested = [c.args[0] for c in mock_mcp_client.get_symbol_source.call_args_list]
+    assert requested == ["fn"]
+
+
+@pytest.mark.asyncio
 async def test_pipeline_context_carries_state_through_stages(mock_mcp_client):
     """Verify each stage reads from and writes to the shared PipelineContext."""
     pipeline = Pipeline(mock_mcp_client, llm_preference="none")
@@ -242,3 +270,107 @@ async def test_pipeline_generation_outcome_records_provider_and_attempts(mock_mc
     assert result_ctx.generation_outcome.provider == "template-only"
     assert result_ctx.generation_outcome.attempts >= 1
     assert isinstance(result_ctx.generation_outcome.degraded, bool)
+
+
+class _UnknownNodeNarrativeProvider:
+    """Simulates an LLM that keeps writing a narrative for a node not in the diagram.
+
+    Goes through spec_builder.parse_narratives, so the real validator raises
+    exactly as it would on a real provider's JSON.
+    """
+    name = "bad-llm"
+
+    def __init__(self):
+        self.calls = []
+
+    async def generate_narratives(self, spec, blast_radius, graph, source_snippets, previous_error=None):
+        self.calls.append(previous_error)
+        payload = {"narratives": [{"node_id": "n_ghost", "narrative": "made up", "risk_reasons": []}]}
+        return parse_narratives(json.dumps(payload), spec, blast_radius)
+
+
+class _ApiFailingProvider:
+    name = "flaky-llm"
+
+    def __init__(self):
+        self.calls = 0
+
+    async def generate_narratives(self, spec, blast_radius, graph, source_snippets, previous_error=None):
+        self.calls += 1
+        raise ProviderTransientError("Gemini API 429 RESOURCE_EXHAUSTED: quota")
+
+
+@pytest.mark.asyncio
+async def test_unknown_narrative_node_retries_twice_then_degrades_to_template(mock_mcp_client):
+    bad = _UnknownNodeNarrativeProvider()
+    pipeline = Pipeline(mock_mcp_client, llm_preference="gemini")
+    ctx = PipelineContext(repo_path="/fake", ref_range="HEAD~1", max_depth=3)
+
+    with patch("orchestrator.pipeline.resolve_provider", new=AsyncMock(return_value=bad)):
+        result_ctx = await pipeline.run(ctx)
+
+    # One initial attempt plus MAX_RETRIES (2) retries.
+    assert MAX_RETRIES == 2
+    assert len(bad.calls) == 3
+    assert bad.calls[0] is None
+    assert all("unknown node" in err for err in bad.calls[1:]), "validation error must be fed back"
+
+    outcome = result_ctx.generation_outcome
+    assert outcome.provider == "template-only"
+    assert outcome.attempts == 3
+    assert outcome.degraded is True
+    # Narratives fall back to the template; the hallucinated node never appears.
+    assert "ghost" not in result_ctx.mermaid_text
+    assert [n.node_id for n in result_ctx.diagram_spec.narratives] == ["n_sym1"]
+    assert "n_sym1" in result_ctx.mermaid_text
+
+
+@pytest.mark.asyncio
+async def test_provider_api_error_retries_twice_then_degrades_to_template(mock_mcp_client):
+    flaky = _ApiFailingProvider()
+    pipeline = Pipeline(mock_mcp_client, llm_preference="gemini")
+    ctx = PipelineContext(repo_path="/fake", ref_range="HEAD~1", max_depth=3)
+
+    with patch("orchestrator.pipeline.resolve_provider", new=AsyncMock(return_value=flaky)):
+        result_ctx = await pipeline.run(ctx)
+
+    assert flaky.calls == 3
+    assert result_ctx.generation_outcome.provider == "template-only"
+    assert result_ctx.generation_outcome.degraded is True
+
+
+@pytest.mark.asyncio
+async def test_gemini_api_error_is_raised_as_transient(monkeypatch):
+    from google.genai import errors as genai_errors
+    from orchestrator.llm.gemini_provider import GeminiProvider
+
+    provider = GeminiProvider(api_key="fake-key", model="gemini-retired")
+    retired = genai_errors.ClientError(
+        404, {"error": {"code": 404, "message": "model retired", "status": "NOT_FOUND"}})
+    monkeypatch.setattr(provider._client.aio.models, "generate_content", AsyncMock(side_effect=retired))
+    br = BlastRadiusResult(RootSymbols=[], AffectedNodes=[], MaxDepthUsed=3,
+                           TotalNodesAffected=0, TotalEdgesTraversed=0)
+    graph = Graph(Nodes={})
+
+    with pytest.raises(ProviderTransientError, match="404 NOT_FOUND: model retired"):
+        await provider.generate_narratives(build_spec(br, graph), br, graph, {})
+
+
+@pytest.mark.asyncio
+async def test_degrade_logs_provider_attempt_and_error_at_warning(mock_mcp_client, caplog):
+    bad = _UnknownNodeNarrativeProvider()
+    pipeline = Pipeline(mock_mcp_client, llm_preference="gemini")
+    ctx = PipelineContext(repo_path="/fake", ref_range="HEAD~1", max_depth=3)
+
+    with caplog.at_level("WARNING", logger="blastradius"), \
+            patch("orchestrator.pipeline.resolve_provider", new=AsyncMock(return_value=bad)):
+        await pipeline.run(ctx)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+    assert [m for m in warnings if "attempt 1/3 validation failed" in m and "[bad-llm]" in m]
+    degrade = [m for m in warnings if "degrading to template-only" in m]
+    assert len(degrade) == 1
+    assert "[bad-llm]" in degrade[0]
+    assert "(attempt 3)" in degrade[0]
+    assert "unknown node: n_ghost" in degrade[0]
+    assert "\n" not in degrade[0]

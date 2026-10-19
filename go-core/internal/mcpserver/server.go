@@ -4,6 +4,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -134,13 +135,20 @@ func (s *Server) toolComputeBlastRadius(ctx context.Context, req mcp.CallToolReq
 	}
 
 	changed := graph.MapHunksToSymbols(g, diffs)
+	deleted := graph.UnanalyzedDeletedFiles(g, diffs)
 	if len(changed) == 0 {
-		return mcp.NewToolResultError(fmt.Sprintf("no symbol-level changes detected for ref_range=%q", refRange)), nil
+		msg := fmt.Sprintf("no symbol-level changes detected for ref_range=%q", refRange)
+		if len(deleted) > 0 {
+			msg += fmt.Sprintf(" (%d deleted file(s) have no symbols in the current graph: %s)",
+				len(deleted), strings.Join(deleted, ", "))
+		}
+		return mcp.NewToolResultError(msg), nil
 	}
 
 	traverser := graph.NewTraverser(g)
 	result := traverser.ComputeBlastRadius(changed, maxDepth)
 	traverser.PopulateSeverity(&result, s.scorer)
+	result.DeletedFilesNotAnalyzed = deleted
 
 	return jsonToolResult(result)
 }

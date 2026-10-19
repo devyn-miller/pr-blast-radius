@@ -1,14 +1,32 @@
-You are formatting an ALREADY-COMPUTED dependency impact analysis into a
-styled diagram specification. Do NOT invent nodes, edges, or relationships
-beyond what is given below.
+You are writing short narratives for a dependency impact diagram that has
+ALREADY been built from static analysis. The nodes, labels, risk tiers,
+subgraph grouping and edges below are FIXED. You cannot add, remove, rename,
+regroup or re-tier anything. Your only job is the narrative text.
 
-BLAST RADIUS DATA (ground truth):
-{{ blast_radius.model_dump_json(indent=2) }}
+DIAGRAM NODES (fixed):
+{% for n in nodes %}
+- node_id: {{ n.id }}
+  label: {{ n.label }}
+  tier: {{ n.tier }}
+{%- if n.distance is not none %}
+  distance_from_change: {{ n.distance }}
+{%- endif %}
+  risk_reasons: {{ n.reasons | tojson }}
+{% endfor %}
 
-SOURCE CONTEXT for the highest-risk nodes (narrative purposes only):
-{% for symbol_id, source in source_snippets.items() %}
---- {{ symbol_id }} ---
-{{ source }}
+EDGES (fixed; "A -> B" means a change to A can break B, which calls A):
+{% for e in edges %}
+- {{ e.from_label }} -> {{ e.to_label }}{% if e.style == "dashed" %} (low-confidence resolution){% endif %}
+{% else %}
+- (none)
+{% endfor %}
+
+SOURCE CONTEXT (for grounding the narratives only):
+{% for n in nodes if n.source %}
+--- {{ n.label }} ({{ n.id }}) ---
+{{ n.source }}
+{% else %}
+(no source fetched)
 {% endfor %}
 
 {% if previous_error %}
@@ -16,6 +34,16 @@ Your previous output was INVALID: {{ previous_error }}
 Correct this specific issue.
 {% endif %}
 
-Group nodes into subgraphs by risk tier, assign risk_tier from
-severity_score, and write a narrative (<=280 chars) per high/critical
-node, grounded only in the data above.
+Write exactly one narrative for each of these node_ids, and no others:
+{% for nid in targets %}
+- {{ nid }}
+{% endfor %}
+
+Rules:
+- node_id must be copied exactly from the list above.
+- narrative: at most 280 characters, explaining why this node matters for
+  this change, grounded only in the data above.
+- Return ONLY node_id and narrative for each node. The risk_reasons shown
+  above are static-analysis output, already attached to each node; they are
+  context for your prose, not something to echo back. Anything else you
+  return is discarded.
