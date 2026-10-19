@@ -56,12 +56,31 @@ def render_narratives_markdown(spec: MermaidDiagramSpec) -> str:
     return "\n".join(lines) + "\n"
 
 
+def count_unaffected(graph, blast_radius) -> int:
+    """Graph nodes that are neither a changed root nor affected.
+
+    Computed from the graph and Go's result only. Ids are de-duplicated so a
+    root that also appears as affected is not subtracted twice, and ids absent
+    from the graph (e.g. a root in a deleted file) are not subtracted at all.
+    """
+    touched = {r.SymbolID for r in blast_radius.RootSymbols}
+    touched |= {a.NodeID for a in blast_radius.AffectedNodes}
+    return len(graph.Nodes.keys() - touched)
+
+
+def render_unaffected_line(graph, blast_radius) -> str:
+    n = count_unaffected(graph, blast_radius)
+    return f"\n{n} unaffected symbol{'' if n == 1 else 's'}\n"
+
+
 async def render_all_outputs(mermaid_text: str, blast_radius, out_dir: str = "./blast-radius-output",
-                             spec: MermaidDiagramSpec | None = None) -> OutputPaths:
+                             spec: MermaidDiagramSpec | None = None, graph=None) -> OutputPaths:
     os.makedirs(out_dir, exist_ok=True)
     md_path = os.path.join(out_dir, "impact.md")
     with open(md_path, "w") as f:
         f.write("# PR Blast Radius\n\n```mermaid\n" + mermaid_text + "\n```\n")
+        if graph is not None:
+            f.write(render_unaffected_line(graph, blast_radius))
         if spec is not None:
             f.write(render_narratives_markdown(spec))
 

@@ -144,5 +144,5 @@ class Pipeline:
 
     async def _render_outputs(self, ctx):
         ctx.output_paths = await render_all_outputs(ctx.mermaid_text, ctx.blast_radius,
-                                                    spec=ctx.diagram_spec)
+                                                    spec=ctx.diagram_spec, graph=ctx.graph)
         return ctx
