@@ -11,8 +11,6 @@ A **polyglot static analysis tool** that computes the "blast radius" of code cha
 
 **Key Innovation:** The LLM **never decides anything Go already computed**. Go performs deterministic AST parsing, dependency resolution and severity scoring; Python builds the whole diagram from that output (nodes, labels, risk tiers, grouping, edges). The LLM only writes short narratives for nodes that are already placed, and Pydantic rejects any narrative that names an unknown node or cites a risk reason Go did not compute.
 
----
-
 ## Quick Start
 
 ### Option 1: Try the Web Demo
@@ -43,7 +41,6 @@ python -m orchestrator.cli scan \
   --verbose
 ```
 
----
 
 ## How It Works
 
@@ -76,15 +73,14 @@ python -m orchestrator.cli scan \
 
 ### Why This Architecture?
 
-| Traditional Approach | **Our Approach** |
+| Traditional Approach | **This Repo's Approach** |
 |---------------------|-----------------|
-| ❌ LLM guesses dependencies via prompt | ✅ Tree-sitter parses AST (100% accurate) |
-| ❌ LLM writes Mermaid syntax (breaks often) | ✅ Diagram built in code; LLM writes validated narratives only |
-| ❌ LLM decides what looks risky | ✅ Risk tiers are fixed cutoffs on Go's severity score |
-| ❌ No confidence scores | ✅ Every edge has 0.0-1.0 confidence |
-| ❌ Fabricates edges when uncertain | ✅ Unresolvable calls → zero edges (logged) |
+| LLM guesses dependencies via prompt | Tree-sitter parses AST (100% accurate) |
+| LLM writes Mermaid syntax (breaks often) | Diagram built in code; LLM writes validated narratives only |
+| LLM decides what looks risky | Risk tiers are fixed cutoffs on Go's severity score |
+| No confidence scores | Every edge has 0.0-1.0 confidence |
+| Fabricates edges when uncertain | Unresolvable calls → zero edges (logged) |
 
----
 
 ## Example Output
 
@@ -100,7 +96,7 @@ def apply_discount(self, base_price: Money, customer_tier: str) -> Money:
 
 ```python
 def apply_discount(self, base_price: Money, customer_tier: str, currency: str = "USD") -> Money:
-    # ⚠️ Signature changed!
+    # Signature changed!
 ```
 
 ### Analysis Result
@@ -189,8 +185,6 @@ Notes on the rest of the graph:
 - The inventory branch (`reserve_stock`, `InventoryService.reserve`) is **not**
   affected — it is the untouched control in the fixture.
 
----
-
 ## Usage Tutorial
 
 ### 1. Analyze Uncommitted Changes
@@ -272,8 +266,6 @@ python -m orchestrator.cli scan \
   --verbose                # Show debug logs
 ```
 
----
-
 ## Architecture
 
 ### Go Engine (`go-core/`)
@@ -318,7 +310,7 @@ severity_score = 0.35 * 1/(1 + distance)      # closeness to the change
 Python then buckets that score into a risk tier. **The tier cutoffs are
 calibrated against the score's reachable range, not against `[0, 1]`.** An
 affected node is always at distance ≥ 1 — distance 0 is a changed root, which
-is never scored — so the distance term can never exceed half its weight, and
+is never scored, so the distance term can never exceed half its weight, and
 the real ceiling is:
 
 | node | max reachable score (distance ≥ 1) |
@@ -368,8 +360,6 @@ orchestrator/
 7. `compile_mermaid` — spec → Mermaid text
 8. `render_outputs` — Write .md + .svg
 
----
-
 ## Testing
 
 ### Run Go Tests
@@ -404,71 +394,3 @@ pytest -v
 
 - **Go:** All internal packages have unit tests + 1 integration test
 - **Python:** 52/52 passing (spec builder, pipeline, LLM fallback, Mermaid compiler)
-
----
-
-## Additional Resources to Learn More!
-
-### Blog Posts
-
-- [Building a Static Analysis Tool that Beats LLM-Only Approaches](https://yourblog.com/blast-radius)
-- [Why Tree-sitter + LLM is Better than Prompt Engineering](https://yourblog.com/tree-sitter-llm)
-
-### Videos
-
-- [Demo Walkthrough (5 min)](https://youtube.com/watch?v=...)
-- [Architecture Deep Dive (15 min)](https://youtube.com/watch?v=...)
-
-### Documentation
-
-- [API Reference](./docs/API.md)
-- [Adding Language Support](./docs/LANGUAGES.md)
-- [Custom Resolution Rules](./docs/RULES.md)
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md)
-
-**Priority areas:**
-
-- 🌐 Additional language support (TypeScript, Rust, Java)
-- 🎨 UI improvements for the web demo
-- 📊 Alternative visualization formats (D3.js, Graphviz)
-- 🧪 More test coverage
-
----
-
-## 📝 License
-
-MIT License - see [LICENSE](./LICENSE)
-
----
-
-## 🙏 Acknowledgments
-
-- **Tree-sitter** — Powers the AST parsing
-- **go-git** — Git operations in pure Go
-- **Pydantic** — Schema validation safety net
-- **Mermaid.js** — Beautiful diagrams
-- **MCP Protocol** — Clean Go ↔ Python boundary
-
----
-
-## 📞 Contact
-
-- **Author:** Your Name
-- **Email:** you@example.com
-- **Twitter:** [@yourusername](https://twitter.com/yourusername)
-- **Website:** [yourwebsite.com](https://yourwebsite.com)
-
----
-
-<div align="center">
-
-**⭐ Star this repo if you find it useful!**
-
-[Live Demo](https://pr-blast-radius.vercel.app) • [Report Bug](https://github.com/yourusername/pr-blast-radius/issues) • [Request Feature](https://github.com/yourusername/pr-blast-radius/issues)
-
-</div>
