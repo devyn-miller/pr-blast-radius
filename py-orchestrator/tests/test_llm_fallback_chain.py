@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 from orchestrator.llm.resolve import resolve_provider
 from orchestrator.llm.template_provider import TemplateOnlyProvider
 from orchestrator.errors import ProviderUnavailableError
+from orchestrator.llm.gemini_provider import DEFAULT_MODEL
 
 
 @pytest.mark.asyncio
@@ -19,7 +20,7 @@ async def test_auto_prefers_gemini_when_key_present_and_healthy(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
     with patch("orchestrator.llm.gemini_provider.GeminiProvider.health_check", new=AsyncMock(return_value=True)):
         provider = await resolve_provider("auto")
-    assert provider.name == "gemini-2.5-flash"
+    assert provider.name == DEFAULT_MODEL
 
 
 @pytest.mark.asyncio
