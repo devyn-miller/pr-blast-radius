@@ -20,9 +20,9 @@ type symbolEntry struct {
 // in file B) is impossible until every file's symbols are known — you
 // cannot resolve pass 2 while still running pass 1.
 type SymbolTable struct {
-	byQualifiedName map[string][]symbolEntry // supports duck-typing ambiguity (P5): >1 candidate is expected, not a bug
-	byReceiverType  map[string][]symbolEntry // Go: all methods on a given struct type, for interface-implementer checks (R4)
-	interfaces      map[string][]string      // interface name -> required method names (Go only)
+	byQualifiedName map[string][]symbolEntry     // supports duck-typing ambiguity (P5): >1 candidate is expected, not a bug
+	byReceiverType  map[string][]symbolEntry     // Go: all methods on a given struct type, for interface-implementer checks (R4)
+	interfaces      map[string][]string          // interface name -> required method names (Go only)
 	importAliases   map[string]map[string]string // filePath -> {alias: modulePath}, import scope is per-file
 }
 

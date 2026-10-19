@@ -29,8 +29,8 @@ type Parser interface {
 // is what lets `graph.BuildGraph` iterate over a mixed-language file set
 // without language-specific branching anywhere in its own code.
 type Registry struct {
-	parsers    map[Language]Parser
-	extToLang  map[string]Language
+	parsers   map[Language]Parser
+	extToLang map[string]Language
 }
 
 // NewRegistry builds a Registry from a set of already-constructed Parsers.
