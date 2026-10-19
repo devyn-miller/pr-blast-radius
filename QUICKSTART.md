@@ -2,11 +2,11 @@
 
 Get PR Blast Radius running in under 5 minutes.
 
-## 🎯 Choose Your Path
+## Choose Your Path
 
-### Path 1: GUI Mode (1 minute) ⭐ NEW!
+### Path 1: GUI Mode (1 minute)
 
-**Visual interface** - No command line needed!
+**Visual interface**
 
 ```bash
 cd web-demo
@@ -17,21 +17,18 @@ npm run dev
 Open **http://localhost:3000** and:
 1. Select repository path (or use `../examples/tinyshop`)
 2. Choose diff type, LLM provider
-3. Click "Run Analysis" 🚀
+3. Click "Run Analysis"
 4. See results on the same screen!
 
-**Everything visual** - Sliders, dropdowns, live diagrams, no typing commands!
+**Everything visual**
 
 See [web-demo/README.md](./web-demo/README.md) for full GUI docs.
-
----
 
 ### Path 2: Live Web Demo (0 minutes)
 **👉 [Live Web Demo](https://pr-blast-radius.vercel.app)**
 
 Click examples, see diagrams, no installation needed!
 
----
 
 ### Path 3: CLI Install (5 minutes)
 
@@ -69,13 +66,11 @@ cat py-orchestrator/blast-radius-output/impact.md
 **Success!** You should see a Mermaid diagram with 6 affected nodes:
 `OrderService.price` at distance 1, in its own **Critical Risk** group (every
 pricing route goes through it, so it carries the graph's maximum fan-in), the
-four route handlers that call it — `create_order`, `quote_order`, `price_cart`,
-`checkout` — at distance 2 under **High Risk**, and `api/routes.py (module
+four route handlers that call it `create_order`, `quote_order`, `price_cart`,
+`checkout` at distance 2 under **High Risk**, and `api/routes.py (module
 level)` under **Medium Risk**. The inventory route is not affected.
 
----
-
-## 🎨 Deploy Web Demo (5 minutes)
+## Deploy Web Demo (5 minutes)
 
 **Prerequisites:**
 - GitHub account
@@ -110,11 +105,10 @@ vercel
 # https://your-project.vercel.app
 ```
 
-**Live in 2 minutes!** 🚀
+**Live in 2 minutes!**
 
----
 
-## 🧪 Verify Installation
+## Verify Installation
 
 ### Test Go Engine
 ```bash
@@ -143,9 +137,7 @@ pytest -v
 make demo DEMO_LLM=none
 ```
 
----
-
-## 🎓 What to Try Next
+## What to Try Next
 
 ### 1. Use the GUI on Your Own Repo
 - Run `npm run dev` in `web-demo/`
@@ -191,9 +183,7 @@ python -m orchestrator.cli scan \
   --verbose               # Show debug logs
 ```
 
----
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Command not found: blastradius"
 ```bash
@@ -237,75 +227,24 @@ python --version
 python -m pytest
 ```
 
----
+## Learn More
 
-## 📚 Learn More
+- **README.md:** Full documentation
+- **DEPLOYMENT.md:** Production deployment guide
+- **Architecture:** See "How It Works" in README
+- **Examples:** Browse `examples/tinyshop/`
+- **Tests:** Study test files for usage patterns
 
-- **README.md** — Full documentation
-- **DEPLOYMENT.md** — Production deployment guide
-- **Architecture** — See "How It Works" in README
-- **Examples** — Browse `examples/tinyshop/`
-- **Tests** — Study test files for usage patterns
 
----
+## Additional Tips
 
-## 🎯 Portfolio Checklist
+1. Use `--verbose` flag when debugging to see each pipeline stage
+2. SQLite cache speeds up repeated analysis
+3. Start with `--llm none` to verify Go engine works before trying LLM
+4. Max depth matters; depth=3 is usually enough, depth=5+ can be slow
+5. Use pre-commit hook to add analysis to your pre-commit workflow
 
-Ready to showcase this project? Complete these steps:
-
-- [ ] Deploy web demo to Vercel
-- [ ] Add custom domain (optional but impressive)
-- [ ] Create 30-second GIF demo
-- [ ] Write README with clear examples
-- [ ] Add architecture diagram
-- [ ] Publish Docker image
-- [ ] Create GitHub releases
-- [ ] Write technical blog post
-- [ ] Add to portfolio website
-- [ ] Share on Twitter/LinkedIn
-
----
-
-## 💡 Pro Tips
-
-1. **Use `--verbose` flag** when debugging to see each pipeline stage
-2. **Cache is your friend** — SQLite cache speeds up repeated analysis
-3. **Start with `--llm none`** to verify Go engine works before trying LLM
-4. **Max depth matters** — depth=3 is usually enough, depth=5+ can be slow
-5. **Pre-commit hook** — Add analysis to your pre-commit workflow
-
----
-
-## 🎬 Demo Script (for presentations)
-
-```bash
-# 1. Run the demo (temp copy of TinyShop with apply_discount's signature changed)
-make demo DEMO_LLM=none        # or: make demo-gemini
-
-# 2. Show output
-cat py-orchestrator/blast-radius-output/impact.md
-
-# 3. Explain
-# "OrderService.price calls apply_discount, and four POST routes call price"
-# "price is critical, not the routes: it's the one chokepoint they all share"
-# "The GET /inventory route is NOT affected - different dependency path"
-# "Deterministic: tree-sitter AST parsing builds the diagram; the LLM only writes the notes"
-```
-
----
 
 **Questions?** Check [README.md](./README.md) or open an issue!
 
 **Ready to deploy?** See [DEPLOYMENT.md](./DEPLOYMENT.md)
-
-**Want to contribute?** See [CONTRIBUTING.md](./CONTRIBUTING.md) (coming soon)
-
----
-
-<div align="center">
-
-**⭐ Star the repo if this helped you!**
-
-[GitHub](https://github.com/yourusername/pr-blast-radius) • [Live Demo](https://pr-blast-radius.vercel.app) • [Docs](./README.md)
-
-</div>
