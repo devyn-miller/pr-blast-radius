@@ -1,12 +1,12 @@
-# ⚡ Quick Start Guide
+# Quick Start Guide
 
 Get PR Blast Radius running in under 5 minutes.
 
 ## Choose Your Path
 
-### Path 1: GUI Mode (1 minute)
+### Path 1: GUI Mode (1 minute) NEW!
 
-**Visual interface**
+**Visual interface** - No command line needed!
 
 ```bash
 cd web-demo
@@ -17,20 +17,14 @@ npm run dev
 Open **http://localhost:3000** and:
 1. Select repository path (or use `../examples/tinyshop`)
 2. Choose diff type, LLM provider
-3. Click "Run Analysis"
+3. Click "Run Analysis" 
 4. See results on the same screen!
 
-**Everything visual**
+**Everything visual** - Sliders, dropdowns, live diagrams, no typing commands!
 
-See [web-demo/README.md](./web-demo/README.md) for full GUI docs.
+---
 
-### Path 2: Live Web Demo (0 minutes)
-**👉 [Live Web Demo](https://pr-blast-radius.vercel.app)**
-
-Click examples, see diagrams, no installation needed!
-
-
-### Path 3: CLI Install (5 minutes)
+### Path 2: CLI Install (5 minutes)
 
 **Prerequisites:**
 - Go 1.26.5+ (per `go-core/go.mod`) and a C compiler (tree-sitter uses cgo)
@@ -41,7 +35,7 @@ Click examples, see diagrams, no installation needed!
 
 ```bash
 # 1. Clone
-git clone https://github.com/yourusername/pr-blast-radius
+git clone https://github.com/devyn-miller/pr-blast-radius
 cd pr-blast-radius
 
 # 2. Build Go binary
@@ -66,47 +60,11 @@ cat py-orchestrator/blast-radius-output/impact.md
 **Success!** You should see a Mermaid diagram with 6 affected nodes:
 `OrderService.price` at distance 1, in its own **Critical Risk** group (every
 pricing route goes through it, so it carries the graph's maximum fan-in), the
-four route handlers that call it `create_order`, `quote_order`, `price_cart`,
-`checkout` at distance 2 under **High Risk**, and `api/routes.py (module
+four route handlers that call it — `create_order`, `quote_order`, `price_cart`,
+`checkout` — at distance 2 under **High Risk**, and `api/routes.py (module
 level)` under **Medium Risk**. The inventory route is not affected.
 
-## Deploy Web Demo (5 minutes)
-
-**Prerequisites:**
-- GitHub account
-- Vercel account (free)
-
-**Steps:**
-
-```bash
-# 1. Initialize git (if not already)
-cd web-demo
-git init
-git add .
-git commit -m "Initial commit"
-
-# 2. Push to GitHub
-git remote add origin https://github.com/yourusername/pr-blast-radius.git
-git push -u origin main
-
-# 3. Deploy to Vercel
-# Option A: Web UI
-# - Go to vercel.com/new
-# - Import your GitHub repo
-# - Root Directory: web-demo
-# - Click Deploy
-
-# Option B: CLI
-npm i -g vercel
-vercel
-# Follow prompts, select web-demo directory
-
-# 4. Visit your live site!
-# https://your-project.vercel.app
-```
-
-**Live in 2 minutes!**
-
+---
 
 ## Verify Installation
 
@@ -128,7 +86,7 @@ cd py-orchestrator
 pytest -v
 
 # Expected output:
-# 54 passed in ~12s
+# ... all tests passing
 ```
 
 ### Test End-to-End
@@ -136,6 +94,8 @@ pytest -v
 # From repo root
 make demo DEMO_LLM=none
 ```
+
+---
 
 ## What to Try Next
 
@@ -153,14 +113,14 @@ python -m orchestrator.cli scan \
   --llm auto
 ```
 
-### 2. Compare Branches
+### 3. Compare Branches
 ```bash
 python -m orchestrator.cli scan \
   --repo . \
   --diff main...feature-branch
 ```
 
-### 3. Use Different LLMs
+### 4. Use Different LLMs
 ```bash
 # Gemini (best quality, free tier)
 export GEMINI_API_KEY="get-from-https://aistudio.google.com/apikey"
@@ -174,7 +134,7 @@ python -m orchestrator.cli scan --repo . --diff HEAD~1 --llm ollama
 python -m orchestrator.cli scan --repo . --diff HEAD~1 --llm none
 ```
 
-### 4. Customize Depth
+### 5. Customize Depth
 ```bash
 python -m orchestrator.cli scan \
   --repo . \
@@ -182,6 +142,8 @@ python -m orchestrator.cli scan \
   --max-depth 5 \         # Deeper traversal
   --verbose               # Show debug logs
 ```
+
+---
 
 ## Troubleshooting
 
@@ -227,24 +189,68 @@ python --version
 python -m pytest
 ```
 
+---
+
 ## Learn More
 
-- **README.md:** Full documentation
-- **DEPLOYMENT.md:** Production deployment guide
-- **Architecture:** See "How It Works" in README
-- **Examples:** Browse `examples/tinyshop/`
-- **Tests:** Study test files for usage patterns
+- **README.md** — Full documentation
+- **Architecture** — See "How It Works" in README
+- **Examples** — Browse `examples/tinyshop/`
+- **Tests** — Study test files for usage patterns
 
+---
 
-## Additional Tips
+## Portfolio Checklist
 
-1. Use `--verbose` flag when debugging to see each pipeline stage
-2. SQLite cache speeds up repeated analysis
-3. Start with `--llm none` to verify Go engine works before trying LLM
-4. Max depth matters; depth=3 is usually enough, depth=5+ can be slow
-5. Use pre-commit hook to add analysis to your pre-commit workflow
+Ready to showcase this project? Complete these steps:
 
+- [ ] Add custom domain (optional but impressive)
+- [ ] Create 30-second GIF demo
+- [ ] Write README with clear examples
+- [ ] Add architecture diagram
+- [ ] Create GitHub releases
+- [ ] Write technical blog post
+- [ ] Add to portfolio website
+- [ ] Share on Twitter/LinkedIn
+
+---
+
+## Pro Tips
+
+1. **Use `--verbose` flag** when debugging to see each pipeline stage
+2. **Cache is your friend** — SQLite cache speeds up repeated analysis
+3. **Start with `--llm none`** to verify Go engine works before trying LLM
+4. **Max depth matters** — depth=3 is usually enough, depth=5+ can be slow
+5. **Pre-commit hook** — Add analysis to your pre-commit workflow
+
+---
+
+## Demo Script (for presentations)
+
+```bash
+# 1. Run the demo (temp copy of TinyShop with apply_discount's signature changed)
+make demo DEMO_LLM=none        # or: make demo-gemini
+
+# 2. Show output
+cat py-orchestrator/blast-radius-output/impact.md
+
+# 3. Explain
+# "OrderService.price calls apply_discount, and four POST routes call price"
+# "price is critical, not the routes: it's the one chokepoint they all share"
+# "The GET /inventory route is NOT affected - different dependency path"
+# "Deterministic: tree-sitter AST parsing builds the diagram; the LLM only writes the notes"
+```
+
+---
 
 **Questions?** Check [README.md](./README.md) or open an issue!
 
-**Ready to deploy?** See [DEPLOYMENT.md](./DEPLOYMENT.md)
+---
+
+<div align="center">
+
+**Star the repo if this helped you!**
+
+[GitHub](https://github.com/devyn-miller/pr-blast-radius) • [Docs](./README.md)
+
+</div>
