@@ -2,10 +2,8 @@
 
 > **Visualize the impact of code changes with deterministic static analysis, plus optional LLM-written explanations**
 
+[![CI](https://github.com/devyn-miller/pr-blast-radius/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/devyn-miller/pr-blast-radius/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Go Tests](https://img.shields.io/badge/Go%20Tests-Passing-success)](./go-core)
-[![Python Tests](https://img.shields.io/badge/Python%20Tests-52%2F52-success)](./py-orchestrator)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black)](https://pr-blast-radius.vercel.app)
 
 A **polyglot static analysis tool** that computes the "blast radius" of code changes — which downstream symbols could break when you modify a function signature, refactor a class, or update shared utilities.
 
@@ -13,15 +11,11 @@ A **polyglot static analysis tool** that computes the "blast radius" of code cha
 
 ## Quick Start
 
-### Option 1: Try the Web Demo
-
-**👉 [Live Demo](https://pr-blast-radius.vercel.app)**: No installation required!
-
-### Option 2: Install from Source
+### Install from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pr-blast-radius
+git clone https://github.com/devyn-miller/pr-blast-radius
 cd pr-blast-radius
 
 # Build the Go binary
@@ -40,7 +34,6 @@ python -m orchestrator.cli scan \
   --go-binary ./bin/blastradius \
   --verbose
 ```
-
 
 ## How It Works
 
@@ -80,7 +73,6 @@ python -m orchestrator.cli scan \
 | LLM decides what looks risky | Risk tiers are fixed cutoffs on Go's severity score |
 | No confidence scores | Every edge has 0.0-1.0 confidence |
 | Fabricates edges when uncertain | Unresolvable calls → zero edges (logged) |
-
 
 ## Example Output
 
@@ -378,19 +370,9 @@ go test ./cmd/blastradius -run TestFullPipeline
 cd py-orchestrator
 pip install -e ".[dev]"
 pytest -v
-
-# 70 tests covering:
-# - Deterministic spec builder: tiers, labels, edges, LLM can't change
-#   structure or risk_reasons (24 tests)
-# - Pipeline state machine, retries and fallback (14 tests)
-# - Risk tier cutoffs vs. the severity score's reachable range (11 tests)
-# - Mermaid compiler (10 tests)
-# - LLM fallback chain (4 tests)
-# - Env/config: Ollama, .env, cache path (4 tests)
-# - Go JSON contract and graph types (3 tests)
 ```
 
 ### Test Coverage
 
 - **Go:** All internal packages have unit tests + 1 integration test
-- **Python:** 52/52 passing (spec builder, pipeline, LLM fallback, Mermaid compiler)
+- **Python:** tests for spec builder, pipeline, LLM fallback, Mermaid compiler
