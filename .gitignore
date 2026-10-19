@@ -1,6 +1,6 @@
 bin/
 *.exe
-go-core/**/*.db
+*.db
 py-orchestrator/.venv/
 py-orchestrator/**/__pycache__/
 py-orchestrator/**/*.egg-info/
@@ -10,3 +10,4 @@ py-orchestrator/**/*.egg-info/
 .idea/
 docs/generated/
 blast-radius-output/
+PORTFOLIO_SETUP.md

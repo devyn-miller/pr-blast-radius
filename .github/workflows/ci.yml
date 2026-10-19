@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  go:
+    name: Go build, vet, test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go-core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-core/go.mod
+          cache-dependency-path: go-core/go.sum
+
+      # go-tree-sitter and the grammars are cgo, so a C toolchain is required.
+      - name: Install C toolchain
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      # The golden test copies examples/tinyshop and commits the copy as its own
+      # base repo, so no fixture setup is needed here.
+
+      # gofmt -l prints the files it would reformat and exits 0 either way, so
+      # the output has to be turned into the failure signal explicitly.
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt-clean:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./... -v
+
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: py-orchestrator
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: py-orchestrator/pyproject.toml
+
+      - run: pip install -e ".[dev]"
+      - run: pytest -v
+
+  contract-check:
+    name: Go/Python JSON contract
+    runs-on: ubuntu-latest
+    # Go marshals the MCP response structs without json tags, so the JSON keys
+    # are the exact Go field names (ID, FilePath, UnresolvedCallCount, ...).
+    # Pydantic ignores unknown keys, so a rename on either side silently zeroes
+    # data. `blastradius --print-schema` emits every struct the server sends
+    # with its field names; check_contract.py fails on any difference from the
+    # Pydantic models in orchestrator/models/graph_types.py.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-core/go.mod
+          cache-dependency-path: go-core/go.sum
+
+      - name: Install C toolchain
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: py-orchestrator/pyproject.toml
+
+      - name: Install orchestrator
+        working-directory: py-orchestrator
+        run: pip install -e .
+
+      - name: Export Go schema
+        working-directory: go-core
+        run: go run ./cmd/blastradius --print-schema > "$RUNNER_TEMP/go-schema.json"
+
+      - name: Diff against Pydantic models
+        working-directory: py-orchestrator
+        run: python scripts/check_contract.py "$RUNNER_TEMP/go-schema.json"
