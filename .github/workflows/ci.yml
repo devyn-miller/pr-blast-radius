@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly, so a dependency release inside the pinned ranges that breaks the
+  # demo is caught without waiting for a push.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   go:
@@ -97,3 +102,49 @@ jobs:
       - name: Diff against Pydantic models
         working-directory: py-orchestrator
         run: python scripts/check_contract.py "$RUNNER_TEMP/go-schema.json"
+
+  demo-smoke:
+    name: Clean-install demo smoke test
+    runs-on: ubuntu-latest
+    # The python job mocks the MCP client, so an mcp SDK change that breaks the
+    # real Go<->Python round trip passes unit tests (mcp 2.x renaming
+    # CallToolResult.isError did exactly that). This runs the real demo from a
+    # clean checkout with no pip or Go cache, so it resolves dependencies the
+    # way a fresh clone does.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-core/go.mod
+          cache: false
+
+      - name: Install C toolchain
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # The demo commits a temp copy of examples/tinyshop.
+      - name: Configure git identity
+        run: |
+          git config --global user.name "CI demo"
+          git config --global user.email "ci-demo@localhost"
+
+      - run: make init
+
+      # Printed before the demo so a drift failure shows what was resolved.
+      - name: Show resolved dependency versions
+        run: py-orchestrator/.venv/bin/python -m pip list
+
+      - run: make build
+
+      - name: make demo (template-only, no LLM)
+        run: make demo DEMO_LLM=none
+
+      - name: Assert impact.md contains a Mermaid flowchart
+        run: |
+          out=py-orchestrator/blast-radius-output/impact.md
+          test -f "$out" || { echo "$out was not written"; exit 1; }
+          grep -q flowchart "$out" || { echo "$out has no flowchart:"; cat "$out"; exit 1; }
