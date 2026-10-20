@@ -2,12 +2,16 @@
 name = "blast-radius-orchestrator"
 version = "0.1.0"
 requires-python = ">=3.11"
+# Lower bounds: oldest versions tested (dev venv). Upper bounds: next minor
+# above the newest versions that pass `make test` and `make demo`. mcp 2.x
+# renamed CallToolResult.isError, so mcp is the one most likely to break.
+# Raise a bound only after both pass on the new version.
 dependencies = [
-    "google-genai>=0.2.0",
-    "ollama>=0.1.0",
-    "pydantic>=2.0.0",
-    "mcp>=1.0.0",
-    "typer>=0.9.0",
+    "google-genai>=2.11.0,<2.32",
+    "ollama>=0.6.2,<0.7",
+    "pydantic>=2.13.4,<2.15",
+    "mcp>=1.28.1,<2.4",
+    "typer>=0.26.8,<0.28",
     "rich>=13.0.0",
     "jinja2>=3.1.0",
     "python-dotenv>=1.0",
