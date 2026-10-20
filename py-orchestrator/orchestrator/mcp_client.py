@@ -59,7 +59,16 @@ class BlastRadiusMCPClient:
         return self._parse(result, SymbolSourceResult)
 
     def _parse(self, result, model):
-        if result.isError:
-            raise MCPToolError(str(result.content))
-        payload = result.content[0].text
-        return TypeAdapter(model).validate_json(payload)
+        # mcp 2.x renamed CallToolResult.isError to is_error ("isError" is now
+        # only the wire alias); 1.x has only isError. Read whichever exists.
+        is_error = getattr(result, "is_error", None)
+        if is_error is None:
+            is_error = result.isError
+        if is_error:
+            raise MCPToolError(" ".join(getattr(c, "text", repr(c)) for c in result.content))
+        if not result.content:
+            raise MCPToolError("MCP tool returned no content")
+        first = result.content[0]
+        if getattr(first, "text", None) is None:
+            raise MCPToolError(f"MCP tool returned {first.type!r} content, expected text")
+        return TypeAdapter(model).validate_json(first.text)
